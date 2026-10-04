@@ -47,10 +47,10 @@ export const AppShell: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full min-h-0 w-full max-w-md mx-auto bg-black relative shadow-lg overflow-hidden select-none">
+    <div className="flex flex-col w-full h-full max-w-md md:mx-auto bg-black relative md:shadow-2xl overflow-hidden select-none">
       {/* Offline Alert Banner (Requirement 6 & 7) */}
       {!isOnline && (
-        <div className="bg-amber-950/95 border-b border-amber-600/70 text-amber-200 px-4 py-2 text-xs flex items-center justify-center gap-2 z-50 animate-fade-in backdrop-blur-md">
+        <div className="bg-amber-950/95 border-b border-amber-600/70 text-amber-200 px-4 py-2 text-xs flex items-center justify-center gap-2 z-50 animate-fade-in backdrop-blur-md pt-[calc(env(safe-area-inset-top,0px)+0.5rem)]">
           <span>📡</span>
           <span className="font-semibold">You're offline</span>
           <span className="text-amber-300/80">• Live map and feeds will reconnect when online</span>
@@ -123,14 +123,14 @@ export const AppShell: React.FC = () => {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main className="flex-1 flex flex-col relative overflow-hidden min-h-0">
         <Outlet />
       </main>
 
       {/* Bottom Navigation with Safe-Area & 44px Touch Targets (Requirement 9, 11, 12) */}
       <nav
-        className="bg-gray-950/95 border-t border-gray-800/90 backdrop-blur-md flex justify-around items-center px-1 z-40 shrink-0"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0.25rem)', paddingTop: '0.25rem' }}
+        className="bg-gray-950/95 border-t border-gray-800/90 backdrop-blur-md flex justify-around items-center px-1 z-40 shrink-0 w-full"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0.5rem)', paddingTop: '0.375rem' }}
       >
         <NavItem to="/" label="Map" icon="🗺️" />
         <NavItem to="/pulse" label="Pulse" icon="📡" />

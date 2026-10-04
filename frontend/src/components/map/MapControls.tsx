@@ -11,11 +11,11 @@ export const MapControls: React.FC<MapControlsProps> = ({ onRecenter, locating, 
   const navigate = useNavigate();
 
   return (
-    <div className="absolute bottom-20 right-4 z-10 flex flex-col gap-2.5 items-end">
+    <div className="absolute bottom-6 right-4 z-20 flex flex-col gap-2.5 items-end">
       {/* Start Activity button */}
       <button
         onClick={() => navigate('/start')}
-        className="h-11 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center gap-2 shadow-xl border border-indigo-400 backdrop-blur-md active:scale-95 transition-all text-xs font-extrabold"
+        className="h-11 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center gap-2 shadow-xl border border-indigo-400 backdrop-blur-md active:scale-95 transition-all text-xs font-extrabold cursor-pointer"
         aria-label="Start an Activity"
       >
         <span className="text-base font-bold">+</span>
@@ -26,7 +26,7 @@ export const MapControls: React.FC<MapControlsProps> = ({ onRecenter, locating, 
       {onOpenHistory && (
         <button
           onClick={onOpenHistory}
-          className="h-10 px-3.5 bg-gray-900/90 hover:bg-gray-800 text-white rounded-full flex items-center gap-1.5 shadow-lg border border-gray-700 backdrop-blur-md active:scale-95 transition-all text-xs font-bold"
+          className="h-10 px-3.5 bg-gray-900/90 hover:bg-gray-800 text-white rounded-full flex items-center gap-1.5 shadow-lg border border-gray-700 backdrop-blur-md active:scale-95 transition-all text-xs font-bold cursor-pointer"
           aria-label="Area Reputation & History"
         >
           <span>🏛️</span>
@@ -38,7 +38,7 @@ export const MapControls: React.FC<MapControlsProps> = ({ onRecenter, locating, 
       <button 
         onClick={onRecenter}
         disabled={locating}
-        className="w-12 h-12 min-w-[48px] min-h-[48px] bg-gray-800/95 text-white rounded-full flex items-center justify-center shadow-xl border border-gray-600 active:scale-95 transition-transform"
+        className="w-12 h-12 min-w-[48px] min-h-[48px] bg-gray-800/95 text-white rounded-full flex items-center justify-center shadow-xl border border-gray-600 active:scale-95 transition-transform cursor-pointer"
         aria-label="Recenter Map"
       >
         {locating ? (

@@ -186,7 +186,7 @@ export const PulseScreen: React.FC = () => {
   return (
     <div className="flex-1 bg-gray-950 flex flex-col h-full overflow-hidden text-white">
       {/* Header */}
-      <header className="p-4 bg-gray-900/90 border-b border-gray-800 flex justify-between items-center backdrop-blur-sm z-10">
+      <header className="px-4 pb-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] bg-gray-900/90 border-b border-gray-800 flex justify-between items-center backdrop-blur-sm z-10">
         <div>
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">

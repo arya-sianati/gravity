@@ -88,7 +88,7 @@ export const LeaderboardScreen: React.FC = () => {
   }, [selectedActivity, period, selectedSeason]);
 
   return (
-    <div className="flex-1 bg-gray-900 flex flex-col items-center p-4">
+    <div className="flex-1 bg-gray-900 flex flex-col items-center px-4 pb-4 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] overflow-y-auto w-full">
       <h1 className="text-2xl font-bold text-white mb-6">Leaderboards</h1>
       
       {/* Activity Selector */}

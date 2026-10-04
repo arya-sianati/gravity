@@ -11,8 +11,29 @@ import { MapControls } from './MapControls';
 import { useGravitySocket } from '../../lib/realtime/useGravitySocket';
 import { AreaHistoryModal } from '../history/AreaHistoryModal';
 
-const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const FALLBACK_CENTER: [number, number] = [-75.5085, 40.5985]; // Muhlenberg College campus
+
+const OSM_RASTER_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'osm-tiles': {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors'
+    }
+  },
+  layers: [
+    {
+      id: 'osm-tiles-layer',
+      type: 'raster',
+      source: 'osm-tiles',
+      minzoom: 0,
+      maxzoom: 19
+    }
+  ]
+};
 
 interface GravityMapProps {}
 
@@ -51,15 +72,37 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
   useEffect(() => {
     if (mapRef.current) return;
 
-    mapRef.current = new maplibregl.Map({
+    const map = new maplibregl.Map({
       container: mapContainerRef.current!,
       style: STYLE_URL,
       center: FALLBACK_CENTER,
       zoom: 14,
       interactive: true
     });
+    mapRef.current = map;
 
-    mapRef.current.on('load', () => {
+    // Fallback to OSM raster style if vector style encounters fatal errors
+    map.on('error', (e: any) => {
+      if (e?.error?.message?.includes('style') || e?.error?.message?.includes('source')) {
+        console.warn('MapLibre style error, switching to fallback OSM raster style:', e);
+        try {
+          map.setStyle(OSM_RASTER_STYLE);
+        } catch (fallbackErr) {
+          console.error('OSM raster fallback failed:', fallbackErr);
+        }
+      }
+    });
+
+    // ResizeObserver ensures canvas always fills container immediately upon mount or resize
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+    });
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    map.on('load', () => {
+      map.resize();
       // 1. Setup Pulse Soon Source & Layers (Translucent + Patterned/Dashed Outline)
       if (!mapRef.current!.getSource('pulse-soon-source')) {
         mapRef.current!.addSource('pulse-soon-source', {
@@ -202,7 +245,8 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
     });
 
     return () => {
-      mapRef.current?.remove();
+      resizeObserver.disconnect();
+      map.remove();
       mapRef.current = null;
     };
   }, []);
@@ -319,19 +363,19 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col">
+    <div className="relative w-full h-full overflow-hidden">
       {geoError && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-gray-900 bg-opacity-80 text-white px-4 py-2 rounded-full text-sm shadow-md pointer-events-none transition-opacity">
+        <div className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 transform -translate-x-1/2 z-20 bg-gray-900 bg-opacity-80 text-white px-4 py-2 rounded-full text-sm shadow-md pointer-events-none transition-opacity">
           {geoError}
         </div>
       )}
       
       {/* Filters Overlay */}
-      <div className="absolute top-4 right-4 z-10 flex flex-wrap gap-2 justify-end max-w-[70%]">
+      <div className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] right-4 z-20 flex flex-wrap gap-2 justify-end max-w-[70%]">
         {/* Pulse Soon Toggle Pill */}
         <button
           onClick={() => setShowSoon(!showSoon)}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm transition-all flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ${
             showSoon
               ? 'bg-indigo-600 border-indigo-400 text-white shadow-indigo-600/30'
               : 'bg-gray-800 border-gray-700 text-gray-500 opacity-70'
@@ -347,7 +391,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
             <button
               key={act.slug}
               onClick={() => toggleActivityFilter(act.slug)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm transition-colors cursor-pointer ${
                 isHidden 
                   ? 'bg-gray-800 border-gray-700 text-gray-500 opacity-70' 
                   : 'bg-gray-900 border-gray-600 text-white'
@@ -360,7 +404,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         })}
       </div>
 
-      <div ref={mapContainerRef} className="flex-1 w-full" />
+      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
       <MapControls
         onRecenter={handleRecenter}
         locating={locating}

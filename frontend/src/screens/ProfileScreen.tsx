@@ -81,7 +81,7 @@ export const ProfileScreen: React.FC = () => {
   const remaining = nextLevelXp - user.total_xp;
 
   return (
-    <div className="flex-1 bg-black text-white p-5 overflow-y-auto">
+    <div className="flex-1 bg-black text-white px-5 pb-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-900">
         <h1 className="text-xl font-bold tracking-tight">Profile</h1>

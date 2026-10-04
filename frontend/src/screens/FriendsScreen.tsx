@@ -338,7 +338,7 @@ export const FriendsScreen: React.FC = () => {
   ).length;
 
   return (
-    <div className="flex-1 bg-black text-white p-5 overflow-y-auto max-w-2xl mx-auto w-full">
+    <div className="flex-1 bg-black text-white px-5 pb-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] overflow-y-auto max-w-2xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-900">
         <div>

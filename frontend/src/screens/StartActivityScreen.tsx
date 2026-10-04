@@ -116,7 +116,7 @@ export const StartActivityScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 bg-gray-900 p-6 flex flex-col h-full overflow-y-auto">
+    <div className="flex-1 bg-gray-900 px-6 pb-6 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] flex flex-col h-full overflow-y-auto">
       <h1 className="text-2xl font-bold text-white mb-6">Start Activity</h1>
       
       {loading && (
@@ -126,9 +126,29 @@ export const StartActivityScreen: React.FC = () => {
       )}
 
       {error && (
-        <div className="bg-red-500 bg-opacity-20 text-red-100 p-4 rounded-lg mb-6 text-sm">
-          {error}
-          <button onClick={() => { setError(null); setSelectedActivity(null); setShowLabelInput(false); setCheckingNearby(false); }} className="ml-4 underline font-bold">Reset</button>
+        <div className="bg-red-500/20 border border-red-500/40 text-red-100 p-4 rounded-xl mb-6 text-sm flex flex-col gap-2">
+          <span>{error}</span>
+          <div className="flex items-center gap-3">
+            {selectedActivity && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  proceedToStart(selectedActivity, 40.5985, -75.5085);
+                }}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold"
+              >
+                Use Campus Location
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => { setError(null); setSelectedActivity(null); setShowLabelInput(false); setCheckingNearby(false); }}
+              className="text-gray-400 hover:text-white underline font-semibold text-xs"
+            >
+              Reset
+            </button>
+          </div>
         </div>
       )}
 

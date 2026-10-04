@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface MapControlsProps {
   onRecenter: () => void;
@@ -6,8 +7,24 @@ interface MapControlsProps {
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({ onRecenter, locating }) => {
+  const navigate = useNavigate();
+
   return (
-    <div className="absolute bottom-24 right-4 z-10 flex flex-col gap-2">
+    <div className="absolute bottom-24 right-4 z-10 flex flex-col gap-2.5 items-end">
+      {/* Pulse button */}
+      <button
+        onClick={() => navigate('/pulse')}
+        className="h-10 px-3.5 bg-gray-900/90 hover:bg-gray-800 text-white rounded-full flex items-center gap-1.5 shadow-lg border border-gray-700 backdrop-blur-md active:scale-95 transition-all text-xs font-bold"
+        aria-label="Open Pulse Feed"
+      >
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span>Pulse</span>
+      </button>
+
+      {/* Recenter button */}
       <button 
         onClick={onRecenter}
         disabled={locating}

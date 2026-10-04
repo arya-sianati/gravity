@@ -186,3 +186,7 @@ CHANNEL_LAYERS = {
 
 # Gravity XP Configuration
 GRAVITY_MIN_XP_DURATION_SECONDS = 60 # 1 minute minimum to qualify for participation XP
+
+# Gravity Pulse Configuration
+GRAVITY_PULSE_DEFAULT_RADIUS_M = env.int('GRAVITY_PULSE_DEFAULT_RADIUS_M', default=5000)
+GRAVITY_PULSE_MAX_RADIUS_M = env.int('GRAVITY_PULSE_MAX_RADIUS_M', default=50000)

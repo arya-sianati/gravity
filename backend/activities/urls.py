@@ -8,7 +8,8 @@ from .views import (
     LiveMapAPIView,
     JoinTokenAPIView,
     ParticipationMetricsAPIView,
-    LeaderboardAPIView
+    LeaderboardAPIView,
+    PulseNowAPIView
 )
 
 router = DefaultRouter()
@@ -19,6 +20,7 @@ router.register(r'events', GravityEventViewSet, basename='event')
 router.register(r'seasons', SeasonViewSet, basename='season')
 
 urlpatterns = [
+    path('pulse/now/', PulseNowAPIView.as_view(), name='pulse-now'),
     path('map/live/', LiveMapAPIView.as_view(), name='map-live'),
     path('join/<uuid:token>/', JoinTokenAPIView.as_view(), name='join-token'),
     path('activity-types/', ActivityTypeListAPIView.as_view(), name='activity-type-list'),

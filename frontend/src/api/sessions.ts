@@ -44,8 +44,8 @@ export const startSession = async (activityType: number, lat: number, lng: numbe
   return response.data;
 };
 
-export const joinSession = async (sessionId: string): Promise<ActivitySession> => {
-  const response = await apiClient.post<ActivitySession>(`/api/sessions/${sessionId}/join/`);
+export const joinSession = async (sessionId: string, params?: { source?: string }): Promise<ActivitySession> => {
+  const response = await apiClient.post<ActivitySession>(`/api/sessions/${sessionId}/join/`, params || {});
   return response.data;
 };
 

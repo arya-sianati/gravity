@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 15 — Pulse
+Phase 16 — Friends & Presence (Next)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -27,6 +27,15 @@ Phase 15 — Pulse
   - Activated `period=season` for phase 10 Leaderboards API.
   - Added frontend support for filtering metrics by "Season" and selecting current / past seasons.
   - Fully idempotent finalization workflow capturing `SeasonStanding` and distributing Season rewards securely mapping to `award_xp` with `XPTransaction.Reason.SEASON`.
+- Phase 15 - Pulse Now
+  - Endpoint `GET /api/pulse/now/?lat=...&lng=...&radius=...&activity=...&limit=...` with PostGIS spatial query and active participant counting.
+  - Explainable, bounded, deterministic Pulse score (`pulse_service.py`) combining distance decay, participant strength, and recency decay.
+  - Deterministic secondary tie-breaker ordering (`pulse_score DESC`, `participants DESC`, `distance ASC`, `started_at DESC`, `session_id ASC`).
+  - Reused Phase 07 privacy architecture: hidden sessions omitted for non-owners, friends-only fallback safe, blurred sessions use coarse/rounded distance representations, raw exact coordinates omitted from payload.
+  - Single lifecycle join integration: `POST /api/sessions/<id>/join/` with `source='pulse'` automatically records `join_method='suggestion'`.
+  - Frontend `PulseScreen.tsx` with dynamic activity filter chips, realtime WebSocket updates on `map_changed`, visibilitychange / reconnection refetch, empty/locating/error states, and direct navigation to Map.
+  - Dynamic Activity acceptance tested with Pickleball and 'Other' custom labels.
+  - Comprehensive test suite added in `tests_phase15.py` (24 dedicated tests; 106 tests total across repository).
 
 ## In progress
 - None
@@ -55,4 +64,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 15: Pulse.
+Begin Phase 16: Friends & Presence.

@@ -115,11 +115,22 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
         if Participation.objects.filter(user=request.user, status=Participation.Status.ACTIVE).exists():
             return Response({"detail": "You are already active in another session."}, status=status.HTTP_409_CONFLICT)
 
+        source = request.data.get('source') if isinstance(request.data, dict) else None
+        if not source:
+            source = request.query_params.get('source')
+
+        if source == 'pulse':
+            join_method = Participation.JoinMethod.SUGGESTION
+        elif source == 'map':
+            join_method = Participation.JoinMethod.MAP
+        else:
+            join_method = Participation.JoinMethod.SELF
+
         Participation.objects.create(
             session=session,
             user=request.user,
             status=Participation.Status.ACTIVE,
-            join_method=Participation.JoinMethod.SELF
+            join_method=join_method
         )
 
         return Response(ActivitySessionSerializer(session).data, status=status.HTTP_200_OK)
@@ -609,3 +620,57 @@ class GravityEventViewSet(viewsets.ReadOnlyModelViewSet):
                     'xp_multiplier', 'flat_xp_bonus', 'badge_icon'
                 ]
         return GravityEventSerializer
+
+from rest_framework.views import APIView
+from .logic.pulse_service import get_pulse_now
+
+class PulseNowAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        lat_str = request.query_params.get('lat')
+        lng_str = request.query_params.get('lng')
+
+        if lat_str is None or lng_str is None:
+            return Response({"detail": "Both lat and lng query parameters are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            lat = float(lat_str)
+            lng = float(lng_str)
+        except (ValueError, TypeError):
+            return Response({"detail": "Invalid latitude or longitude value."}, status=status.HTTP_400_BAD_REQUEST)
+
+        radius = None
+        radius_str = request.query_params.get('radius')
+        if radius_str is not None:
+            try:
+                radius = float(radius_str)
+                if radius <= 0:
+                    return Response({"detail": "Radius must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+            except (ValueError, TypeError):
+                return Response({"detail": "Invalid radius parameter."}, status=status.HTTP_400_BAD_REQUEST)
+
+        limit = 20
+        limit_str = request.query_params.get('limit')
+        if limit_str is not None:
+            try:
+                limit = int(limit_str)
+                if limit <= 0:
+                    return Response({"detail": "Limit must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+            except (ValueError, TypeError):
+                return Response({"detail": "Invalid limit parameter."}, status=status.HTTP_400_BAD_REQUEST)
+
+        activity_slug = request.query_params.get('activity')
+
+        try:
+            data = get_pulse_now(
+                user=request.user,
+                lat=lat,
+                lng=lng,
+                radius_m=radius,
+                activity_slug=activity_slug,
+                limit=limit
+            )
+            return Response(data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

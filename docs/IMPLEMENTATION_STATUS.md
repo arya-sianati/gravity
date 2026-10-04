@@ -1,9 +1,9 @@
 # Gravity — Implementation Status
 
-Last updated: 2026-10-03
+Last updated: 2026-10-04
 
 ## Current phase
-Phase 07 — Live Map Heat
+Phase 09 — WebSockets Foundation
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -13,12 +13,17 @@ Phase 07 — Live Map Heat
 - Phase 04 - Configurable Activity Engine
 - Phase 05 - Map Foundation
 - Phase 06 - Activity Sessions
-  - Implemented `ActivitySession` and `Participation` models using PostGIS.
-  - Enforced single active participation logic per user.
-  - Completed start, join, and leave session logic with `GET /api/sessions/nearby/` endpoint.
-  - Upgraded frontend `StartActivityScreen` to handle nearby matching and `Other` label input.
-  - Created live `ActiveActivityScreen` with client-side accurate elapsed timer.
-  - Added test suites mapping constraints and REST APIs successfully.
+- Phase 07 - Live Map Heat
+  - Built GeoDjango bounding box queries.
+  - Implemented exact, blurred (500m deterministic grid), and hidden privacy coordinates securely.
+  - Deployed dynamic MapLibre heatmap layers driven by backend Activity Type configurations.
+  - Comprehensive PostGIS test coverage.
+- Phase 08 - QR Joining
+  - Designed opaque `UUID4` token architecture.
+  - Built `GET /api/join/{token}/` preview endpoint (privacy-safe).
+  - Built `POST /api/join/{token}/` secure join execution endpoint.
+  - Installed `qrcode.react` to render codes locally on the `ActiveActivityScreen`.
+  - Configured `ProtectedRoute` routing in `App.tsx` matching intended authentication flow safely returning to the QR URL after login.
 
 ## In progress
 - None
@@ -45,4 +50,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 07: Live Map Heat.
+Begin Phase 09: WebSockets Foundation.

@@ -9,7 +9,8 @@ from .views import (
     JoinTokenAPIView,
     ParticipationMetricsAPIView,
     LeaderboardAPIView,
-    PulseNowAPIView
+    PulseNowAPIView,
+    AreaHistoryAPIView,
 )
 
 router = DefaultRouter()
@@ -49,6 +50,10 @@ urlpatterns = [
     # Phase 18: Auto-Stop & Location Heartbeat
     path('me/activity-location/', ActivityLocationHeartbeatAPIView.as_view(), name='activity-location-heartbeat'),
     path('participations/<int:pk>/heartbeat/', ParticipationHeartbeatAPIView.as_view(), name='participation-heartbeat'),
+
+    # Phase 19: Gravity History & Area Reputation
+    path('history/area/', AreaHistoryAPIView.as_view(), name='area-history'),
+    path('map/history/', AreaHistoryAPIView.as_view(), name='map-history'),
 
     path('', include(router.urls)),
 ]

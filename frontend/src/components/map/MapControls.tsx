@@ -4,13 +4,26 @@ import { useNavigate } from 'react-router-dom';
 interface MapControlsProps {
   onRecenter: () => void;
   locating: boolean;
+  onOpenHistory?: () => void;
 }
 
-export const MapControls: React.FC<MapControlsProps> = ({ onRecenter, locating }) => {
+export const MapControls: React.FC<MapControlsProps> = ({ onRecenter, locating, onOpenHistory }) => {
   const navigate = useNavigate();
 
   return (
     <div className="absolute bottom-24 right-4 z-10 flex flex-col gap-2.5 items-end">
+      {/* Area History button */}
+      {onOpenHistory && (
+        <button
+          onClick={onOpenHistory}
+          className="h-10 px-3.5 bg-gray-900/90 hover:bg-gray-800 text-white rounded-full flex items-center gap-1.5 shadow-lg border border-gray-700 backdrop-blur-md active:scale-95 transition-all text-xs font-bold"
+          aria-label="Area Reputation & History"
+        >
+          <span>🏛️</span>
+          <span>History</span>
+        </button>
+      )}
+
       {/* Pulse button */}
       <button
         onClick={() => navigate('/pulse')}

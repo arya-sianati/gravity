@@ -600,6 +600,76 @@ class PulseNowAPIView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+from .logic.history_service import get_area_history
+
+class AreaHistoryAPIView(APIView):
+    """
+    Returns historical activity aggregates for a geographic point/radius.
+    Enforces privacy & small-number suppression.
+    """
+    permission_classes = []
+
+    def get(self, request):
+        lat_str = request.query_params.get('lat')
+        lng_str = request.query_params.get('lng')
+
+        if lat_str is None or lng_str is None:
+            return Response(
+                {"detail": "Both lat and lng query parameters are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            lat = float(lat_str)
+            lng = float(lng_str)
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": "Invalid latitude or longitude value."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        radius = None
+        radius_str = request.query_params.get('radius')
+        if radius_str is not None:
+            try:
+                radius = float(radius_str)
+                if radius <= 0:
+                    return Response(
+                        {"detail": "Radius must be greater than 0."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid radius parameter."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        period = request.query_params.get('period', '30d')
+
+        min_participants = None
+        min_p_str = request.query_params.get('min_participants')
+        if min_p_str is not None:
+            try:
+                min_participants = int(min_p_str)
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid min_participants parameter."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        try:
+            data = get_area_history(
+                lat=lat,
+                lng=lng,
+                radius_m=radius,
+                period=period,
+                min_participants=min_participants,
+            )
+            return Response(data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 from django.core.exceptions import ValidationError as DjangoValidationError, PermissionDenied as DjangoPermissionDenied
 from django.shortcuts import get_object_or_404
 from .models import FriendChallenge, ChallengeParticipant, ActivityMetric, ActivityType

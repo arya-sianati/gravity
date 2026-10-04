@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 18 — Auto-Stop & Session Integrity (Complete)
+Phase 19 — Gravity History / Area Reputation (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -51,9 +51,20 @@ Phase 18 — Auto-Stop & Session Integrity (Complete)
   - Django Admin integration with auto-stop controls and updated seed defaults across activities.
   - Frontend periodic heartbeat (25s interval), `visibilitychange` listener, grace warning banner in `ActiveActivityScreen.tsx`, and auto-stop feedback toast in `AppShell.tsx`.
   - Dedicated test suite `activities/tests_phase18.py` (17 comprehensive tests; 153 tests passing repository-wide).
+- Phase 19 - Gravity History / Area Reputation
+  - PostGIS spherical spatial history queries (`Distance('location', point) <= radius_m`) around arbitrary coordinates without requiring named venues, campuses, or predefined boundaries.
+  - Factual aggregate calculation: total sessions, total qualifying participations, and unique participants across qualifying sessions (`status == ENDED`, non-cancelled, duration >= 60s).
+  - Dominant activity determination based on qualifying participation volume with session count as tie-breaker.
+  - Activity breakdown: participation counts, session counts, unique participants, and share percentage per active activity type.
+  - Temporal patterns: 24-hour distribution across eight 3-hour buckets identifying peak time, and 7-day weekday distribution identifying busiest day in application timezone.
+  - Privacy safeguard & small-number suppression: configurable `GRAVITY_HISTORY_MIN_PARTICIPANTS` (default: 3) suppressing breakdown when unique participant count is low to protect individual routines from deanonymization. Zero exposure of user IDs, usernames, or raw coordinates.
+  - RESTful endpoints `GET /api/history/area/` and `GET /api/map/history/` with flexible period filtering (`today`, `7d`, `30d`, `90d`, `season`, `all`) and radius controls.
+  - Dynamic ActivityType support automatically functioning for custom activities (e.g. Pickleball) with color, icon, and name styling.
+  - Frontend TypeScript client `frontend/src/api/history.ts`, interactive `AreaHistoryModal.tsx` inspection sheet with period chips, radius selector, dominant activity banner, share bars, and pattern summaries, integrated directly into `GravityMap.tsx` (map clicks and controls) and `PulseScreen.tsx`.
+  - Dedicated automated test suite `activities/tests_phase19.py` (14 comprehensive tests; 167 tests passing repository-wide).
 
 ## Next phase
-- Phase 19 — Gravity History
+- Phase 20 — Pulse Soon / Forecasting
 
 ## In progress
 - None

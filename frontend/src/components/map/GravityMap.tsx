@@ -7,6 +7,7 @@ import { getLiveMap } from '../../api/map';
 import type { LiveMapFeatureCollection } from '../../api/map';
 import { MapControls } from './MapControls';
 import { useGravitySocket } from '../../lib/realtime/useGravitySocket';
+import { AreaHistoryModal } from '../history/AreaHistoryModal';
 
 const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const FALLBACK_CENTER: [number, number] = [-98.5795, 39.8283];
@@ -26,6 +27,10 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
   
   // Filtering
   const [hiddenActivities, setHiddenActivities] = useState<Set<string>>(new Set());
+
+  // Area History Inspection
+  const [historyCoords, setHistoryCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState<boolean>(false);
 
   // Realtime
   const { lastMessage } = useGravitySocket('/ws/gravity/');
@@ -106,6 +111,11 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         const bounds = mapRef.current.getBounds();
         setBbox([bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]);
       }, 500);
+    });
+
+    mapRef.current.on('click', (e) => {
+      setHistoryCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+      setHistoryModalOpen(true);
     });
 
     return () => {
@@ -212,7 +222,26 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
       </div>
 
       <div ref={mapContainerRef} className="flex-1 w-full" />
-      <MapControls onRecenter={handleRecenter} locating={locating} />
+      <MapControls
+        onRecenter={handleRecenter}
+        locating={locating}
+        onOpenHistory={() => {
+          if (mapRef.current) {
+            const center = mapRef.current.getCenter();
+            setHistoryCoords({ lat: center.lat, lng: center.lng });
+            setHistoryModalOpen(true);
+          }
+        }}
+      />
+
+      {historyCoords && (
+        <AreaHistoryModal
+          isOpen={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          lat={historyCoords.lat}
+          lng={historyCoords.lng}
+        />
+      )}
     </div>
   );
 };

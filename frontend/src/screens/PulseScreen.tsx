@@ -8,6 +8,7 @@ import { joinSession } from '../api/sessions';
 import { requestCurrentLocation } from '../lib/map/geolocation';
 import { useGravitySocket } from '../lib/realtime/useGravitySocket';
 import { useActiveSession } from '../context/ActiveSessionContext';
+import { AreaHistoryModal } from '../components/history/AreaHistoryModal';
 
 export const PulseScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export const PulseScreen: React.FC = () => {
   const [feedError, setFeedError] = useState<string | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
 
   // Realtime updates
   const { lastMessage } = useGravitySocket('/ws/gravity/');
@@ -166,22 +168,32 @@ export const PulseScreen: React.FC = () => {
         </div>
 
         {coords && (
-          <button
-            onClick={() => fetchPulseFeed()}
-            disabled={loading}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors active:scale-95"
-            title="Refresh feed"
-            aria-label="Refresh feed"
-          >
-            <svg
-              className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHistoryModal(true)}
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold rounded-full flex items-center gap-1.5 border border-gray-700 text-gray-200 transition-all active:scale-95 shadow-sm"
+              title="Inspect Area Reputation & History"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
+              <span>🏛️</span>
+              <span>Reputation</span>
+            </button>
+            <button
+              onClick={() => fetchPulseFeed()}
+              disabled={loading}
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors active:scale-95"
+              title="Refresh feed"
+              aria-label="Refresh feed"
+            >
+              <svg
+                className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
         )}
       </header>
 
@@ -376,6 +388,16 @@ export const PulseScreen: React.FC = () => {
           })
         )}
       </div>
+
+      {coords && (
+        <AreaHistoryModal
+          isOpen={showHistoryModal}
+          onClose={() => setShowHistoryModal(false)}
+          lat={coords.lat}
+          lng={coords.lng}
+          label="Your Current Area"
+        />
+      )}
     </div>
   );
 };

@@ -3,24 +3,21 @@
 Last updated: 2026-10-03
 
 ## Current phase
-Phase 02 — Frontend Foundation
+Phase 03 — Users & Profiles
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
-- Phase 01 - Backend Foundation
-  - Created Python virtual environment.
-  - Installed Django 5.2.17, DRF, Channels, psycopg, and Redis dependencies.
-  - Initialized Django project `config` and `accounts` app.
-  - Set up PostGIS database `gravity`.
-  - Created custom `User` model with `PrivacyMode`.
-  - Ran initial migrations.
-  - Created `admin` superuser.
-  - Verified PostGIS and Redis connectivity.
-  - Added and passed basic foundation tests.
-- Security Correction
-  - Revoked `SUPERUSER` from `gravity_user`.
-  - Created `template_postgis` template database.
-  - Configured Django to use `template_postgis` for testing.
+- Phase 01 - Backend Foundation (Includes Security Fix)
+- Phase 02 - Frontend Foundation
+  - Installed Node.js LTS (v24.21.0).
+  - Initialized React + TypeScript + Vite (`frontend` app).
+  - Configured Tailwind CSS v4.
+  - Added React Router with AppShell layout.
+  - Created placeholder screens (`MapScreen`, `PulseScreen`, `FriendsScreen`, `ProfileScreen`, `StartActivityScreen`).
+  - Created API client with Axios (`apiClient`).
+  - Configured proxy for `/api` and `/ws` to Django backend.
+  - Implemented `/api/health/` backend endpoint.
+  - Frontend successfully fetches from health endpoint.
 
 ## In progress
 - None
@@ -37,22 +34,14 @@ Phase 02 — Frontend Foundation
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt # (To be added later)
+pip install -r requirements.txt
 python manage.py migrate
 
-# Create DB (if starting fresh)
-sudo -u postgres psql -c "CREATE DATABASE gravity;"
-sudo -u postgres psql -c "CREATE USER gravity_user WITH PASSWORD 'gravity_pass';"
-sudo -u postgres psql -c "ALTER ROLE gravity_user CREATEDB;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE gravity TO gravity_user;"
-sudo -u postgres psql -d gravity -c "CREATE EXTENSION postgis;"
-sudo -u postgres psql -d gravity -c "ALTER SCHEMA public OWNER TO gravity_user;"
-
-# Create template DB for testing
-sudo -u postgres psql -c "CREATE DATABASE template_postgis;"
-sudo -u postgres psql -d template_postgis -c "CREATE EXTENSION postgis;"
-sudo -u postgres psql -c "UPDATE pg_database SET datistemplate = TRUE WHERE datname = 'template_postgis';"
+# Setup frontend
+cd frontend
+npm install
+npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 02: Create mobile-first React application using Vite.
+Begin Phase 03: Profile Setup & Auth.

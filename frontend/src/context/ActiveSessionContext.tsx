@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getActiveParticipation, leaveSession } from '../api/sessions';
 import type { ActivitySession } from '../api/sessions';
 import { useAuth } from './AuthContext';
+import { useGravitySocket } from '../lib/realtime/useGravitySocket';
 
 interface ActiveSessionContextType {
   activeSession: ActivitySession | null;
@@ -15,6 +16,9 @@ const ActiveSessionContext = createContext<ActiveSessionContextType | undefined>
 export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [activeSession, setActiveSession] = useState<ActivitySession | null>(null);
+  
+  const wsUrl = activeSession ? `/ws/gravity/session/${activeSession.id}/` : null;
+  const { lastMessage } = useGravitySocket(wsUrl);
 
   const refreshActiveSession = async () => {
     if (!user) {
@@ -44,6 +48,25 @@ export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     refreshActiveSession();
   }, [user]);
+
+  // Realtime updates handling
+  useEffect(() => {
+    if (lastMessage?.type === 'session.updated' || lastMessage?.type === 'session_updated') {
+      const payload = lastMessage.payload;
+      if (payload && activeSession && payload.session_id === activeSession.id) {
+        if (payload.status !== 'active') {
+          // Session ended or cancelled
+          setActiveSession(null);
+        } else {
+          // Update active count
+          setActiveSession(prev => prev ? {
+            ...prev,
+            active_participants_count: payload.participant_count
+          } : null);
+        }
+      }
+    }
+  }, [lastMessage]);
 
   return (
     <ActiveSessionContext.Provider value={{ activeSession, setActiveSession, refreshActiveSession, leaveActiveSession }}>

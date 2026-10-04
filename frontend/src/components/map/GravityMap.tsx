@@ -6,6 +6,7 @@ import type { ActivityType } from '../../api/activities';
 import { getLiveMap } from '../../api/map';
 import type { LiveMapFeatureCollection } from '../../api/map';
 import { MapControls } from './MapControls';
+import { useGravitySocket } from '../../lib/realtime/useGravitySocket';
 
 const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const FALLBACK_CENTER: [number, number] = [-98.5795, 39.8283];
@@ -25,6 +26,16 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
   
   // Filtering
   const [hiddenActivities, setHiddenActivities] = useState<Set<string>>(new Set());
+
+  // Realtime
+  const { lastMessage } = useGravitySocket('/ws/gravity/');
+  const [lastBboxFetchTs, setLastBboxFetchTs] = useState(Date.now());
+
+  useEffect(() => {
+    if (lastMessage?.type === 'map.changed' || lastMessage?.type === 'map_changed') {
+      setLastBboxFetchTs(Date.now());
+    }
+  }, [lastMessage]);
 
   useEffect(() => {
     if (mapRef.current) return;
@@ -157,9 +168,10 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
     };
 
     fetchLiveHeat();
-    const interval = setInterval(fetchLiveHeat, 15000);
+    // Reverted polling from 15s to 30s since WebSockets are primary
+    const interval = setInterval(fetchLiveHeat, 30000);
     return () => clearInterval(interval);
-  }, [bbox, activities, hiddenActivities]);
+  }, [bbox, activities, hiddenActivities, lastBboxFetchTs]);
 
   const toggleActivityFilter = (slug: string) => {
     setHiddenActivities(prev => {

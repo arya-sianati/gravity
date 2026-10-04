@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 09 — WebSockets Foundation
+Phase 10 — Metrics & Leaderboards
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -14,22 +14,20 @@ Phase 09 — WebSockets Foundation
 - Phase 05 - Map Foundation
 - Phase 06 - Activity Sessions
 - Phase 07 - Live Map Heat
-  - Built GeoDjango bounding box queries.
-  - Implemented exact, blurred (500m deterministic grid), and hidden privacy coordinates securely.
-  - Deployed dynamic MapLibre heatmap layers driven by backend Activity Type configurations.
-  - Comprehensive PostGIS test coverage.
 - Phase 08 - QR Joining
-  - Designed opaque `UUID4` token architecture.
-  - Built `GET /api/join/{token}/` preview endpoint (privacy-safe).
-  - Built `POST /api/join/{token}/` secure join execution endpoint.
-  - Installed `qrcode.react` to render codes locally on the `ActiveActivityScreen`.
-  - Configured `ProtectedRoute` routing in `App.tsx` matching intended authentication flow safely returning to the QR URL after login.
+- Phase 09 - Realtime WebSockets
+  - Configured Django Channels with Redis (`channels_redis`).
+  - Added MapConsumer allowing anonymous connects for map-refresh broadcast.
+  - Added SessionConsumer requiring authenticated scopes for specific session groups.
+  - Tied `post_save` / `post_delete` signals on `ActivitySession` and `Participation` to `transaction.on_commit()` for 100% reliable broadcast.
+  - Upgraded frontend to connect React `useGravitySocket` hook with visibility backoff and bounding polling fallback.
+  - Preserved Phase 07 serialization privacy.
 
 ## In progress
 - None
 
 ## Known issues
-- None
+- Phone-camera QR testing recorded as pending for deployment/demo hardening.
 
 ## Deferred
 - Full privacy settings UI remains deferred to P1 / Phase 16 as approved.
@@ -40,6 +38,7 @@ Phase 09 — WebSockets Foundation
 cd backend
 python3 -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt # (or directly via pip for now)
 python manage.py migrate
 python manage.py seed_gravity
 
@@ -50,4 +49,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 09: WebSockets Foundation.
+Begin Phase 10: Metrics & Leaderboards.

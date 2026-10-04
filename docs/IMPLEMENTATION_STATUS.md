@@ -3,23 +3,21 @@
 Last updated: 2026-10-03
 
 ## Current phase
-Phase 04 — Configurable Activity Engine
+Phase 05 — Activity Session Management
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
 - Phase 01 - Backend Foundation (Includes Security Fix)
 - Phase 02 - Frontend Foundation
 - Phase 03 - Authentication & Profile
-  - Implemented registration, login, logout, and current user endpoints using Django session authentication.
-  - Added `@ensure_csrf_cookie` endpoint (`/api/auth/csrf/`) and CSRF validation on mutating actions.
-  - Implemented `/api/me/` retrieval and PATCH updates.
-  - Configured DRF, session cookies, and trusted origins.
-  - Added comprehensive backend test suite in `accounts/tests.py` (15 tests passing).
-  - Built React Auth context (`AuthProvider`), custom `useAuth` hook, and `ProtectedRoute` guard.
-  - Created `LoginScreen` and `RegisterScreen` with clean mobile-first UI and return-path navigation support.
-  - Updated `ProfileScreen` with live backend user data, level/XP metrics, privacy status, inline display name editing, and logout.
-  - Verified end-to-end login -> session persistence across simulated page refresh -> logout -> re-login flow.
-  - Frontend type check (`tsc -b`) and production build passed.
+- Phase 04 - Configurable Activity Engine
+  - Created `ActivityType` and `ActivityMetric` models with strict constraints (slug uniqueness, only one primary metric, no negative configuration values).
+  - Set up Django Admin with `ActivityMetricInline` for easy configuration.
+  - Implemented `/api/activity-types/` (list active) and detail endpoint.
+  - Wrote idempotent `seed_gravity` command and seeded Basketball, Running, Gaming, Studying, Workout, Soccer, Other.
+  - Frontend `StartActivityScreen` now dynamically fetches and renders activities directly from the API.
+  - Executed successful Pickleball acceptance test showing activity adds/removals work without code changes.
+  - 9 backend tests written and passing; frontend TS checks and production build succeeded.
 
 ## In progress
 - None
@@ -37,6 +35,7 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 python manage.py migrate
+python manage.py seed_gravity
 
 # Setup frontend
 cd frontend
@@ -45,4 +44,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 04: Configurable Activity Engine.
+Begin Phase 05: Activity Session Management.

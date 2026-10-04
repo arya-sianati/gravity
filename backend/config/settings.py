@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'channels',
     'accounts',
+    'activities',
 ]
 
 MIDDLEWARE = [

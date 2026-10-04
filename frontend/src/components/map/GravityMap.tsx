@@ -11,13 +11,12 @@ import { MapControls } from './MapControls';
 import { useGravitySocket } from '../../lib/realtime/useGravitySocket';
 import { AreaHistoryModal } from '../history/AreaHistoryModal';
 
-const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const FALLBACK_CENTER: [number, number] = [-75.5085, 40.5985]; // Muhlenberg College campus
 
 // In-memory verified physical GPS coordinates (app session only)
 let lastKnownUserLocation: [number, number] | null = null;
 
-const OSM_RASTER_STYLE: maplibregl.StyleSpecification = {
+const DEFAULT_BASEMAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
     'osm-tiles': {
@@ -37,6 +36,12 @@ const OSM_RASTER_STYLE: maplibregl.StyleSpecification = {
     }
   ]
 };
+
+// Optional CARTO key support if configured in the future; otherwise uses reliable OSM raster basemap
+const CARTO_KEY = import.meta.env.VITE_CARTO_BASEMAP_KEY;
+const INITIAL_STYLE: maplibregl.StyleSpecification | string = CARTO_KEY
+  ? `https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json?api_key=${CARTO_KEY}`
+  : DEFAULT_BASEMAP_STYLE;
 
 interface GravityMapProps {}
 
@@ -149,7 +154,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
 
       map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: STYLE_URL,
+        style: INITIAL_STYLE,
         center: initialCenter,
         zoom: initialZoom,
         interactive: true,
@@ -157,6 +162,19 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         trackResize: true
       });
       mapRef.current = map;
+
+      // Finite startup repaint wake-up loop: repaints up to 60 frames (~1 sec) or until map is loaded
+      let wakeFrames = 0;
+      const wakeInitialRender = () => {
+        if (!map || disposed) return;
+        map.resize();
+        map.triggerRepaint();
+        wakeFrames += 1;
+        if (wakeFrames < 60 && !map.loaded()) {
+          requestAnimationFrame(wakeInitialRender);
+        }
+      };
+      requestAnimationFrame(wakeInitialRender);
 
       refreshMap();
       requestAnimationFrame(refreshMap);
@@ -172,16 +190,8 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
       });
       map.once('idle', refreshMap);
 
-      // Fallback to OSM raster style if vector style encounters fatal errors
       map.on('error', (e: any) => {
-        if (e?.error?.message?.includes('style') || e?.error?.message?.includes('source')) {
-          console.warn('MapLibre style error, switching to fallback OSM raster style:', e);
-          try {
-            map?.setStyle(OSM_RASTER_STYLE);
-          } catch (fallbackErr) {
-            console.error('OSM raster fallback failed:', fallbackErr);
-          }
-        }
+        console.warn('MapLibre event error:', e);
       });
 
       // ResizeObserver ensures canvas always fills container immediately upon mount or resize

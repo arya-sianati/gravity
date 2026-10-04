@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useActiveSession } from '../context/ActiveSessionContext';
+import { QRCodeSVG } from 'qrcode.react';
+import { getJoinCode } from '../api/sessions';
 
 export const ActiveActivityScreen: React.FC = () => {
   const { activeSession, leaveActiveSession } = useActiveSession();
   const [elapsed, setElapsed] = useState<string>('00:00:00');
   const [leaving, setLeaving] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [joinUrl, setJoinUrl] = useState<string | null>(null);
+  const [loadingQR, setLoadingQR] = useState(false);
 
   useEffect(() => {
     if (!activeSession) return;
@@ -24,6 +29,25 @@ export const ActiveActivityScreen: React.FC = () => {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [activeSession]);
+
+  const handleShowQR = async () => {
+    if (!activeSession) return;
+    if (!joinUrl) {
+      setLoadingQR(true);
+      setShowQR(true);
+      try {
+        const data = await getJoinCode(activeSession.id);
+        setJoinUrl(data.join_url);
+      } catch (err) {
+        alert('Failed to get join QR.');
+        setShowQR(false);
+      } finally {
+        setLoadingQR(false);
+      }
+    } else {
+      setShowQR(true);
+    }
+  };
 
   if (!activeSession) {
     return null; // Should ideally be handled by routing, but safe fallback
@@ -63,7 +87,7 @@ export const ActiveActivityScreen: React.FC = () => {
         {elapsed}
       </div>
 
-      <div className="bg-gray-800 rounded-xl p-4 w-full max-w-sm mb-8 border border-gray-700 flex flex-col gap-2">
+      <div className="bg-gray-800 rounded-xl p-4 w-full max-w-sm mb-6 border border-gray-700 flex flex-col gap-2">
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-400">Status</span>
           <span className="text-white capitalize">{activeSession.status}</span>
@@ -79,12 +103,42 @@ export const ActiveActivityScreen: React.FC = () => {
       </div>
 
       <button
+        onClick={handleShowQR}
+        className="w-full max-w-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white font-bold py-3 px-6 rounded-xl transition-colors active:scale-[0.98] mb-4"
+      >
+        Show Join QR
+      </button>
+
+      <button
         onClick={handleLeave}
         disabled={leaving}
         className="w-full max-w-sm bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl transition-colors shadow-lg shadow-red-600/20 active:scale-[0.98] disabled:opacity-50"
       >
         {leaving ? 'Leaving...' : 'Finish / Leave'}
       </button>
+
+      {/* QR Modal Overlay */}
+      {showQR && (
+        <div className="absolute inset-0 z-50 bg-gray-900 flex flex-col items-center justify-center p-6">
+          <h2 className="text-2xl font-bold text-white mb-2 text-center">Scan to join this activity</h2>
+          <p className="text-gray-400 mb-8">{activeSession.activity_type_details.icon} {activeSession.label || activeSession.activity_type_details.name} • {activeSession.active_participants_count} active</p>
+          
+          <div className="bg-white p-6 rounded-xl shadow-2xl mb-8 flex items-center justify-center min-h-[256px] min-w-[256px]">
+            {loadingQR ? (
+              <span className="text-gray-500 font-medium">Loading QR...</span>
+            ) : joinUrl ? (
+              <QRCodeSVG value={joinUrl} size={256} />
+            ) : null}
+          </div>
+          
+          <button
+            onClick={() => setShowQR(false)}
+            className="w-full max-w-xs bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white font-bold py-3 px-6 rounded-xl transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      )}
     </div>
   );
 };

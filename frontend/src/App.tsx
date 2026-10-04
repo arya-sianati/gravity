@@ -10,6 +10,7 @@ import { PulseScreen } from './screens/PulseScreen';
 import { FriendsScreen } from './screens/FriendsScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { StartActivityScreen } from './screens/StartActivityScreen';
+import { QRJoinScreen } from './screens/QRJoinScreen';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             {/* Public Auth Routes */}
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/register" element={<RegisterScreen />} />
+            <Route path="/join/:token" element={<ProtectedRoute><QRJoinScreen /></ProtectedRoute>} />
 
             {/* Protected Application Routes */}
             <Route

@@ -54,3 +54,19 @@ export const getActiveParticipation = async (): Promise<ActivitySession | null> 
   const response = await apiClient.get<ActivitySession | null>('/api/me/active-participation/');
   return response.data;
 };
+
+export const getJoinCode = async (sessionId: string): Promise<{ join_url: string; expires_at: string | null }> => {
+  const response = await apiClient.get(`/api/sessions/${sessionId}/join-code/`);
+  return response.data;
+};
+
+export const getJoinPreview = async (token: string): Promise<any> => {
+  const response = await apiClient.get(`/api/join/${token}/`);
+  return response.data;
+};
+
+export const joinByToken = async (token: string): Promise<any> => {
+  const response = await apiClient.post(`/api/join/${token}/`);
+  return response.data;
+};
+

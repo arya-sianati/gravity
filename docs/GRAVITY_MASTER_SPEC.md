@@ -1,0 +1,1575 @@
+# GRAVITY — Master Product & System Specification
+
+Version: Hackathon V1 Source of Truth
+
+---
+
+# 1. Executive Summary
+
+Gravity is a **live social activity map** that shows what people are actually doing around the user in real time.
+
+Instead of social media being primarily a feed of posts, Gravity turns real-world participation into visible geographic activity.
+
+A user can open Gravity and see live heat for activities such as:
+
+- Basketball
+- Running
+- Gaming
+- Studying
+- Workout
+- Soccer
+- Other
+
+Users can start an activity, join an existing activity, scan a QR code to join, compete on activity-specific leaderboards, earn Gravity XP, progress through seasons, participate in official Gravity Events, challenge friends, and discover what is active nearby through Pulse.
+
+The map is the core interface.
+
+---
+
+# 2. Product Thesis
+
+Traditional social platforms answer:
+
+> What are people posting?
+
+Gravity answers:
+
+> What are people doing around me right now?
+
+The product is built around four loops:
+
+## 2.1 Discovery loop
+
+Map → see live activity → tap hotspot → join activity.
+
+## 2.2 Participation loop
+
+Start/join activity → contribute to heat → record metrics → earn progress.
+
+## 2.3 Competition loop
+
+Activity metrics → leaderboard → friend challenge → season ranking.
+
+## 2.4 Return loop
+
+Friends become active → event begins → season progresses → recurring activity is expected nearby → user returns.
+
+---
+
+# 3. Design Goals
+
+Gravity should feel:
+
+- alive,
+- geographic,
+- competitive,
+- social,
+- immediate,
+- visually understandable,
+- easy to join,
+- permissive rather than suspicious.
+
+Gravity should not feel:
+
+- like a traditional event calendar,
+- like a static fitness tracker,
+- like a map full of individual exact user pins,
+- like a territory conquest game,
+- like a surveillance product,
+- like an admin-heavy enterprise application.
+
+---
+
+# 4. User Types
+
+## 4.1 Regular User
+
+Can:
+
+- register/login,
+- manage profile,
+- view map,
+- view Pulse,
+- start activity,
+- join activity,
+- scan QR,
+- leave/end participation,
+- enter activity metrics,
+- view leaderboards,
+- earn XP,
+- earn badges,
+- participate in seasons,
+- join Gravity Events,
+- add friends,
+- participate in friend challenges,
+- configure location privacy.
+
+## 4.2 Staff/Admin
+
+Uses Django Admin.
+
+Can manage:
+
+- activity types,
+- activity colors/icons,
+- metric definitions,
+- leaderboard configuration,
+- XP configuration,
+- auto-stop settings,
+- clustering distances,
+- official Gravity Events,
+- seasons,
+- badges,
+- featured/trending activities,
+- moderation flags,
+- users when necessary.
+
+No custom admin SPA/PWA is required for V1.
+
+---
+
+# 5. Core Domain Model
+
+Gravity has two key concepts:
+
+## 5.1 Activity Type
+
+A configurable definition of an activity.
+
+Examples:
+
+- Basketball
+- Running
+- Gaming
+
+An Activity Type defines:
+
+- name,
+- slug,
+- icon,
+- map color,
+- enabled/disabled status,
+- primary leaderboard metric,
+- optional secondary metrics,
+- supported verification/context methods,
+- clustering distance,
+- join radius,
+- auto-stop behavior,
+- XP defaults,
+- whether GPS tracking is relevant,
+- whether QR joining is allowed,
+- whether self-start is allowed.
+
+## 5.2 Activity Session
+
+A live instance of an activity occurring at a location.
+
+Example:
+
+> Basketball started at 7:14 PM at coordinates X/Y.
+
+A session has:
+
+- activity type,
+- creator,
+- start time,
+- end time,
+- status,
+- geographic point,
+- optional join token / QR token,
+- participants,
+- session configuration snapshot if required.
+
+Sessions are stored separately even if close sessions are combined visually on the map.
+
+---
+
+# 6. Initial Activity Categories
+
+Seed V1 with:
+
+1. Basketball
+2. Running
+3. Gaming
+4. Studying
+5. Workout
+6. Soccer
+7. Other
+
+These are platform-defined.
+
+Users cannot create official categories in V1.
+
+Admins may add categories through Django Admin.
+
+---
+
+# 7. "Other" Activity Strategy
+
+`Other` is a valid category and a discovery mechanism.
+
+A user starting `Other` may optionally enter a short description/tag.
+
+Examples:
+
+- pickleball,
+- chess,
+- climbing,
+- dancing.
+
+Admins may inspect trends in `Other`.
+
+If a repeated activity becomes popular, admins may create a new official Activity Type.
+
+Future automation can detect these trends.
+
+---
+
+# 8. Starting an Activity
+
+Basic flow:
+
+1. User taps **Start Activity**.
+2. User selects Activity Type.
+3. App requests any needed information.
+4. App reads permitted current location.
+5. Backend creates Activity Session.
+6. User becomes first Participation record.
+7. Session contributes to live map heat.
+8. App opens the active-session screen.
+
+Active-session screen should include:
+
+- activity name/icon,
+- elapsed time,
+- participant count,
+- configured metrics,
+- join QR button,
+- end/leave control,
+- optional privacy/location indicator.
+
+---
+
+# 9. Joining an Activity
+
+Users can join in three main ways.
+
+## 9.1 Map join
+
+Tap a nearby live hotspot/session and select **Join**.
+
+## 9.2 QR join
+
+Scan a QR generated by an active session.
+
+QR resolves to a safe session join URL/token.
+
+## 9.3 Independent start near activity
+
+If a user starts the same Activity Type near an existing session, Gravity may suggest:
+
+> Basketball is already happening nearby. Join it?
+
+The user may join the suggested session or continue as a separate session if appropriate.
+
+---
+
+# 10. Nearby Sessions and Aggregation
+
+Database sessions remain distinct.
+
+Map rendering aggregates geographically.
+
+Example:
+
+- Court A Basketball: 8 participants
+- Court B Basketball: 6 participants
+- Courts are close
+
+Map may visually show one Basketball heat region representing 14 active participants.
+
+If another Basketball session is far away at a park, it appears as another hotspot.
+
+Geospatial clustering thresholds are activity-configurable.
+
+V1 should avoid manual venue definitions.
+
+---
+
+# 11. Map Experience
+
+The primary application screen is the live map.
+
+It should show:
+
+- user's approximate/current location when permitted,
+- live activity heatmap layers,
+- activity icons/labels where useful,
+- Pulse control,
+- start-activity control,
+- filtering by activity,
+- current intensity.
+
+Map should not become visually unreadable when multiple activities overlap.
+
+---
+
+# 12. Heatmap Visual Model
+
+Each Activity Type has a base color.
+
+Example defaults may be chosen during implementation, but admins must be able to change them.
+
+The map uses a separate live heat layer per activity.
+
+Intensity may depend initially on:
+
+- participant count,
+- recency/current status.
+
+Later variables may include:
+
+- duration,
+- growth rate,
+- event bonuses,
+- confidence/verification,
+- activity-specific intensity.
+
+V1 should keep the formula understandable.
+
+### Conceptual V1 heat weight
+
+`heat_weight = active_participant_weight × recency_weight`
+
+Where:
+
+- active sessions have high recency weight,
+- recently ended sessions may fade briefly if desired,
+- old sessions do not appear on the live heatmap.
+
+Do not directly use personal XP as map heat.
+
+---
+
+# 13. Multiple Activities in One Place
+
+Multiple activities coexist.
+
+There is no territory ownership.
+
+If the same region has:
+
+- Basketball,
+- Running,
+- Gaming,
+
+the map may display overlapping heat.
+
+The strongest current activity should naturally look more saturated/intense.
+
+Lower-intensity activity should remain visible through lighter/translucent heat.
+
+Tapping the region can list:
+
+1. Basketball — strongest
+2. Running
+3. Gaming
+
+---
+
+# 14. Gravity Strength
+
+Gravity Strength is an abstract representation of **current activity intensity in a geographic region**.
+
+It is not the same as an activity leaderboard metric.
+
+Gravity Strength can be normalized for UI display, for example 0–100.
+
+Possible V1 factors:
+
+- active participants,
+- recent participant growth,
+- session freshness.
+
+For hackathon simplicity, participant count should be the dominant factor.
+
+---
+
+# 15. Participation
+
+A Participation connects:
+
+- user,
+- session,
+- join time,
+- leave time,
+- join method,
+- current state,
+- recorded metric values,
+- optional location/verification context.
+
+Join methods may include:
+
+- SELF
+- QR
+- MAP
+- INVITE
+- SYSTEM_SUGGESTION
+
+---
+
+# 16. Leaving / Ending
+
+A participant can manually leave.
+
+The session creator can end their participation.
+
+The session itself becomes ended when no active participants remain or when explicitly closed according to backend rules.
+
+Do not assume the creator leaving must terminate everyone else's participation.
+
+---
+
+# 17. Auto-Stop
+
+Auto-stop is activity-configurable.
+
+Basketball example:
+
+- session anchor point exists,
+- allowed activity radius configured,
+- user moves beyond threshold,
+- grace timer begins,
+- app optionally asks if activity is still active,
+- participation auto-ends if user remains away.
+
+Running example:
+
+- location-based stationary radius auto-stop disabled,
+- movement/GPS logic may be used instead.
+
+Gaming/studying at home:
+
+- no automatic exact-location exposure,
+- auto-stop may be timer/manual based.
+
+V1 should implement only the simplest reliable rules.
+
+---
+
+# 18. Verification Philosophy
+
+Gravity accepts self-reporting.
+
+The product should not shame users with labels such as "untrusted."
+
+Backend may record context:
+
+- self-reported,
+- joined by QR,
+- GPS tracked,
+- location matched,
+- multiple participants nearby.
+
+UI may positively display:
+
+- GPS tracked,
+- location confirmed,
+- QR joined.
+
+Advanced trust weighting is not required for V1.
+
+---
+
+# 19. Activity Metrics
+
+Activity metrics are database-configured.
+
+A metric definition contains information such as:
+
+- name,
+- slug,
+- unit,
+- data type,
+- aggregation type,
+- primary/secondary,
+- visible on leaderboard,
+- required/optional,
+- min/max validation,
+- XP weight,
+- display ordering.
+
+Example:
+
+## Basketball
+- points — integer — primary leaderboard metric
+- minutes — duration — secondary
+
+## Running
+- distance — decimal — miles — primary
+- duration — duration — secondary
+
+## Gaming
+- wins — integer
+- duration — duration
+
+## Studying
+- duration — duration — primary
+
+Do not create dedicated database columns such as `basketball_points` on the user model.
+
+---
+
+# 20. Metric Entry
+
+Metrics may be entered:
+
+- during an activity,
+- when leaving,
+- when ending,
+- automatically for GPS-supported metrics later.
+
+V1 should make metric entry fast.
+
+Validation should be reasonable but not overly restrictive.
+
+---
+
+# 21. Activity Leaderboards
+
+Leaderboards are activity-specific.
+
+Leaderboard periods:
+
+- Today
+- This Week
+- This Season
+- All Time
+
+Each Activity Type defines its primary ranking metric.
+
+Examples:
+
+- Running ranked by distance.
+- Basketball ranked by points.
+- Studying ranked by duration.
+
+Users should never need to understand a conversion between miles and Basketball points.
+
+---
+
+# 22. Personal Gravity XP
+
+Personal Gravity XP is a cross-activity progression score.
+
+V1 XP can come from:
+
+- completing activity participation,
+- time participated,
+- official Gravity Events,
+- streak/consistency bonuses,
+- badges/achievements,
+- friend challenges.
+
+Keep V1 XP formula simple and configurable.
+
+Future versions may add additional variables.
+
+---
+
+# 23. Levels
+
+Users have a Gravity level derived from XP.
+
+Exact thresholds should be configurable or represented by a simple deterministic formula.
+
+Example implementation approach:
+
+- Level 1 starts at 0 XP.
+- Increasing levels require progressively more XP.
+
+Do not over-engineer leveling in V1.
+
+---
+
+# 24. Consistency / Streaks
+
+Consistency is an important retention mechanism.
+
+Possible V1 streak:
+
+> At least one qualifying activity per day.
+
+Potential future streaks:
+
+- activity-specific streak,
+- weekly consistency,
+- event streak,
+- friend streak.
+
+Consistency can reward XP and badges.
+
+---
+
+# 25. Activity Tenure
+
+Gravity may show:
+
+> Participating in Basketball since Oct 2026
+
+or:
+
+> Basketball history: 11 months
+
+Tenure may unlock badges.
+
+Tenure does not give a permanent XP multiplier in V1.
+
+---
+
+# 26. Gravity Events
+
+Gravity Events are platform-created.
+
+Admin config fields:
+
+- title,
+- slug,
+- description,
+- featured Activity Type,
+- start datetime,
+- end datetime,
+- XP multiplier or flat reward,
+- badge reward,
+- minimum participation requirement,
+- active/published state,
+- banner/optional image later.
+
+Example:
+
+## Basketball Week
+
+- Basketball featured
+- Oct 12–18
+- +250 completion XP
+- optional 2× activity XP
+- limited badge
+
+Events should be visible in:
+
+- Pulse,
+- activity detail,
+- profile progress,
+- optional home/banner area.
+
+---
+
+# 27. Seasons
+
+A Season has:
+
+- name,
+- number/title,
+- start datetime,
+- end datetime,
+- active state.
+
+Season data can include:
+
+- season XP,
+- season level if desired,
+- activity ranks,
+- earned seasonal badges,
+- challenge outcomes.
+
+At season end:
+
+- results become historical,
+- new season begins,
+- permanent profile history remains.
+
+All-time history is not erased.
+
+---
+
+# 28. Friends
+
+Users can add friends.
+
+Friend system is not follower-based in V1.
+
+A friendship can expose:
+
+- public profile,
+- level,
+- selected badges,
+- activity updates permitted by privacy,
+- challenge status.
+
+Friend requests may be used unless implementation chooses a simple mutual add code for hackathon speed.
+
+---
+
+# 29. Friend Activity
+
+V1 may include a lightweight friend-activity list.
+
+Examples:
+
+- Alex started Running.
+- Sam reached Level 12.
+- Jordan earned a badge.
+- Maya completed Basketball Week.
+
+This does not need to become a full content feed.
+
+Photo posting is future scope.
+
+---
+
+# 30. Friend Challenges
+
+Challenge structure:
+
+- creator,
+- one or more invited friends,
+- Activity Type,
+- metric,
+- target or comparative rule,
+- start/end time,
+- state,
+- results.
+
+Initial challenge modes:
+
+1. **First to target**
+2. **Most metric by deadline**
+3. **Cooperative combined target**
+
+Examples:
+
+- First to run 10 miles.
+- Most Basketball points by Sunday.
+- Study 10 hours together this week.
+
+---
+
+# 31. Pulse
+
+Pulse is a central discovery feature.
+
+## 31.1 Pulse Now
+
+Shows nearby current activity ranked by relevance.
+
+Potential relevance inputs:
+
+- proximity,
+- participant count,
+- Gravity Strength,
+- friend participation,
+- Gravity Event status.
+
+V1 can rank primarily by proximity + activity strength.
+
+## 31.2 Pulse Soon
+
+Shows likely near-future recurring activity.
+
+Example:
+
+> Basketball usually starts here around 6 PM.
+
+Pulse Soon is P2 if time is limited.
+
+---
+
+# 32. Recurring Activity Forecasting
+
+No machine-learning platform is required for V1.
+
+A basic forecast can group historical sessions by:
+
+- Activity Type,
+- geographic cluster,
+- weekday,
+- hour/time bucket.
+
+If sufficient recurring observations exist, backend can generate a prediction with:
+
+- activity,
+- approximate area,
+- expected start range,
+- typical participant range,
+- confidence.
+
+Example:
+
+> Basketball expected 5:45–6:15 PM.
+> Typical peak: 12–18 participants.
+
+---
+
+# 33. Pulse Soon Visual Style
+
+Predicted activity should not look identical to live activity.
+
+Preferred visual:
+
+- hatched/patterned area,
+- translucent color,
+- lower visual priority,
+- label indicating expected/soon.
+
+Live:
+- solid/smooth heat.
+
+Expected:
+- patterned/hatched heat.
+
+---
+
+# 34. Gravity History
+
+Historical geographic reputation can be computed by querying activity around a point/radius.
+
+Possible views:
+
+- Today
+- This Week
+- This Season
+- All Time
+
+Possible results:
+
+- most active category,
+- peak participant count,
+- typical active hours,
+- historical rank of categories nearby.
+
+No named venue is required.
+
+---
+
+# 35. Privacy Modes
+
+Each user has location-sharing preferences.
+
+## Hidden
+Exact coordinates are stored privately in the database for logic/auto-stop, but are strictly never exposed via APIs, WebSockets, map data, or logs. User contributes to aggregated stats/heat where safe, but no identifiable live location is shown.
+
+## Blurred / Approximate
+Exact coordinates are stored privately, but the user appears only as part of an approximate geographic area in all public outputs.
+
+## Friends Only
+Approved friends may receive more precise activity/location context.
+
+## Exact
+User explicitly chooses precise location visibility.
+
+Exact should never be the forced default.
+
+---
+
+# 36. Home / Residential Privacy
+
+Private-location activities such as home gaming require special care.
+
+Approximate location should:
+
+- use a blurred region,
+- contain the actual location,
+- avoid centering a public marker exactly on the residence,
+- avoid exposing repeatable exact coordinates.
+
+The map can display:
+
+> Gaming activity in this area
+
+rather than a personal pin.
+
+---
+
+# 37. Location Permissions
+
+The app must gracefully handle:
+
+- permission granted,
+- permission denied,
+- permission unavailable,
+- stale coordinates,
+- low accuracy.
+
+If location is denied:
+
+- user can still browse map,
+- some activity-start functions may require approximate/manual selection,
+- app should explain the limitation succinctly.
+
+---
+
+# 38. QR Safety
+
+QR codes must not expose sensitive data.
+
+Use a random session join token or signed opaque identifier.
+
+Do not encode raw private user/location data.
+
+QR tokens may expire when sessions end.
+
+---
+
+# 39. Authentication
+
+Backend authority: Django.
+
+V1 can use:
+
+- username/email + password,
+- secure session or token strategy appropriate for the frontend.
+
+Avoid third-party hosted authentication.
+
+Password handling must use Django's standard password hashing.
+
+---
+
+# 40. Django Admin
+
+Django Admin is the administrative product for V1.
+
+Admin models should be usable without editing code for ordinary content/configuration changes.
+
+Admins should be able to:
+
+- add Activity Type,
+- set icon,
+- set map color,
+- set cluster distance,
+- set join radius,
+- toggle self-start,
+- toggle QR,
+- define auto-stop behavior,
+- define metrics,
+- choose primary leaderboard metric,
+- manage events,
+- manage seasons,
+- manage badges,
+- inspect active sessions,
+- inspect participation.
+
+---
+
+# 41. Admin Activity Configuration
+
+Recommended fields:
+
+- `name`
+- `slug`
+- `icon`
+- `color`
+- `is_active`
+- `sort_order`
+- `cluster_radius_m`
+- `join_suggestion_radius_m`
+- `auto_stop_enabled`
+- `auto_stop_radius_m`
+- `auto_stop_grace_seconds`
+- `qr_join_enabled`
+- `self_start_enabled`
+- `gps_tracking_enabled`
+- `default_xp`
+- `heat_weight_multiplier`
+
+Metrics managed as related inline records.
+
+---
+
+# 42. Admin Metrics
+
+Metric fields:
+
+- Activity Type
+- name
+- slug
+- unit
+- data type
+- aggregation method
+- is primary
+- leaderboard enabled
+- required
+- min value
+- max value
+- XP weight
+- sort order
+
+Potential data types:
+
+- integer
+- decimal
+- duration
+- boolean
+
+Avoid arbitrary executable formulas in V1.
+
+---
+
+# 43. API Design Principles
+
+API should be resource-oriented and simple.
+
+Suggested groups:
+
+- auth
+- profile
+- friends
+- activity-types
+- sessions
+- participations
+- map
+- leaderboards
+- events
+- seasons
+- badges
+- challenges
+- pulse
+
+Exact URL naming can be adjusted consistently.
+
+---
+
+# 44. Suggested REST Endpoints
+
+Examples:
+
+- `POST /api/auth/register/`
+- `POST /api/auth/login/`
+- `POST /api/auth/logout/`
+- `GET /api/me/`
+
+Activity:
+
+- `GET /api/activity-types/`
+- `GET /api/activity-types/{slug}/`
+
+Sessions:
+
+- `POST /api/sessions/`
+- `GET /api/sessions/{id}/`
+- `POST /api/sessions/{id}/join/`
+- `POST /api/sessions/{id}/leave/`
+- `POST /api/sessions/{id}/metrics/`
+- `GET /api/sessions/{id}/join-qr/`
+
+Map:
+
+- `GET /api/map/live/?bbox=...`
+- `GET /api/map/history/?lat=...&lng=...&radius=...`
+
+Leaderboards:
+
+- `GET /api/leaderboards/{activity_slug}/?period=week`
+
+Pulse:
+
+- `GET /api/pulse/now/?lat=...&lng=...`
+- `GET /api/pulse/soon/?lat=...&lng=...`
+
+Events:
+
+- `GET /api/events/`
+- `GET /api/events/{slug}/`
+
+Friends:
+
+- `GET /api/friends/`
+- `POST /api/friends/request/`
+- `POST /api/friends/{id}/accept/`
+
+Challenges:
+
+- `GET /api/challenges/`
+- `POST /api/challenges/`
+- `POST /api/challenges/{id}/accept/`
+
+These are guidance, not immutable contract.
+
+---
+
+# 45. Realtime
+
+Use Django Channels/WebSockets.
+
+Realtime events may include:
+
+- session.created
+- session.updated
+- session.ended
+- participant.joined
+- participant.left
+- participant.metric_updated
+- map.region_updated
+- event.updated
+- challenge.updated
+
+Frontend should reconnect gracefully.
+
+Do not send the entire world map through WebSockets.
+
+Scope subscriptions geographically where practical.
+
+For hackathon V1, a simpler shared map channel is acceptable if load is small.
+
+---
+
+# 46. Map Data Payload
+
+Backend should send map-ready aggregates or session points.
+
+For V1, one practical path:
+
+- return active session points with activity type and active participant count;
+- let MapLibre heatmap layers render density/intensity client-side.
+
+Example conceptual payload:
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-93.0, 38.0]
+      },
+      "properties": {
+        "activity": "basketball",
+        "participants": 8,
+        "weight": 8
+      }
+    }
+  ]
+}
+```
+
+If two sessions are close, heatmap rendering naturally overlaps.
+
+PostGIS clustering can be added for summary labels and API efficiency.
+
+---
+
+# 47. Geospatial Database
+
+Use PostgreSQL + PostGIS.
+
+Store session anchor with a spatial point field.
+
+Recommended coordinate system:
+
+- WGS84 / SRID 4326 for stored latitude/longitude.
+
+Use PostGIS/GeoDjango for:
+
+- distance queries,
+- sessions near point,
+- sessions inside bounding box,
+- optional clustering,
+- history around location,
+- join suggestions.
+
+---
+
+# 48. Heatmap Rendering
+
+Use MapLibre GL JS.
+
+Recommended approach:
+
+- one source containing active session features or per-activity sources,
+- one heatmap layer per Activity Type,
+- heatmap weight based on participant count / backend-provided weight,
+- layer color driven by Activity Type configuration,
+- intensity/radius adjusted by zoom.
+
+Because activity colors are configurable, frontend must not assume fixed hard-coded colors.
+
+---
+
+# 49. Frontend Application
+
+Recommended:
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- PWA support
+- MapLibre GL JS
+
+Mobile-first responsive design.
+
+Primary navigation can be:
+
+- Map
+- Pulse
+- Activity/Start
+- Friends
+- Profile
+
+Exact visual treatment can change.
+
+---
+
+# 50. PWA
+
+Public Gravity experience should be installable as a PWA if feasible.
+
+PWA benefits:
+
+- home-screen launch,
+- app-like mobile UI,
+- no app-store deployment,
+- easier hackathon distribution.
+
+Do not spend P0 time on advanced offline behavior.
+
+---
+
+# 51. Backend Application
+
+Recommended:
+
+- Django
+- Django REST Framework
+- GeoDjango
+- Django Channels
+- PostgreSQL/PostGIS
+- Redis for Channels when required.
+
+Backend owns:
+
+- auth,
+- persistence,
+- permissions,
+- geospatial query,
+- XP calculation,
+- leaderboard aggregation,
+- events,
+- seasons,
+- badges,
+- challenge results,
+- recurring forecast generation.
+
+---
+
+# 52. Repository Structure
+
+Recommended monorepo:
+
+```text
+gravity/
+├── README.md
+├── docs/
+│   └── specification files
+├── backend/
+│   ├── manage.py
+│   ├── config/
+│   ├── accounts/
+│   ├── activities/
+│   ├── social/
+│   ├── progression/
+│   ├── events/
+│   └── ...
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   └── ...
+├── deploy/
+│   ├── nginx/
+│   ├── systemd/
+│   └── scripts/
+├── .env.example
+└── docker-compose.dev.yml   # optional
+```
+
+Avoid multiple backend services.
+
+---
+
+# 53. Security Basics
+
+Required:
+
+- HTTPS in production,
+- secure cookies/token storage,
+- CSRF protection where applicable,
+- authentication on mutation endpoints,
+- object-level permission checks,
+- rate limiting if easy,
+- server-side validation,
+- no secret keys committed,
+- opaque QR tokens,
+- privacy-aware location serialization.
+
+---
+
+# 54. Performance Basics
+
+For V1:
+
+- query only current map viewport/bounding box,
+- index spatial fields,
+- index active session/status/time,
+- cache only where useful,
+- avoid querying every historical participation for live map,
+- paginate friends/feed/leaderboards.
+
+Do not prematurely optimize beyond demo-scale needs.
+
+---
+
+# 55. Notifications
+
+Native push notifications are not required for V1.
+
+In-app notifications may be added for:
+
+- friend challenge,
+- badge earned,
+- Gravity Event,
+- nearby recurring activity.
+
+Push can be future scope.
+
+---
+
+# 56. Content Feed
+
+Instagram-style media feed is intentionally deferred.
+
+Future concept:
+
+- users share photos from activities,
+- activity-linked posts,
+- friend feed,
+- show-off/progression content.
+
+Do not let this distract from map/activity mechanics.
+
+---
+
+# 57. Moderation
+
+V1 minimum:
+
+- staff can deactivate users,
+- staff can disable Activity Types,
+- staff can inspect sessions,
+- basic reporting can be deferred if time-limited.
+
+Future:
+
+- content moderation,
+- suspicious metrics,
+- abuse reporting,
+- automated anomaly detection.
+
+---
+
+# 58. Accessibility
+
+Basic V1 expectations:
+
+- readable contrast,
+- text labels in addition to color where practical,
+- touch-friendly controls,
+- keyboard access on desktop,
+- heatmap should not be the only way to identify activity.
+
+Because multiple activity types are color-coded, include icons/text labels in detail views for color-blind accessibility.
+
+---
+
+# 59. Core Screens
+
+## 59.1 Login/Register
+
+Simple entry.
+
+## 59.2 Live Map
+
+Contains:
+
+- map,
+- live heat,
+- current location control,
+- Pulse button,
+- Start Activity button,
+- activity filters,
+- hotspot details.
+
+## 59.3 Start Activity
+
+Activity chooser.
+
+## 59.4 Active Activity
+
+Contains:
+
+- activity,
+- elapsed time,
+- participants,
+- metrics,
+- QR,
+- leave/end.
+
+## 59.5 Activity Detail
+
+Contains:
+
+- current nearby activity,
+- event status,
+- leaderboard link,
+- user's activity stats.
+
+## 59.6 Leaderboard
+
+Period selector and activity metric ranking.
+
+## 59.7 Pulse
+
+Now and later Soon.
+
+## 59.8 Friends
+
+Friend list, recent progress, challenge entry.
+
+## 59.9 Challenges
+
+Active/completed challenge status.
+
+## 59.10 Profile
+
+- XP,
+- level,
+- badges,
+- streak,
+- season history,
+- activity history,
+- privacy settings.
+
+---
+
+# 60. Demo Scenario
+
+The hackathon demo should prove the product with two devices/browser sessions.
+
+Recommended sequence:
+
+1. Open Gravity live map.
+2. Device A starts Basketball.
+3. Orange Basketball heat appears.
+4. A opens join QR.
+5. Device B scans QR and joins.
+6. Participant count increases live.
+7. Heat becomes visibly stronger.
+8. B enters Basketball points.
+9. Basketball leaderboard updates.
+10. Start another activity nearby or elsewhere.
+11. Show overlapping/different heatmap colors.
+12. Tap Pulse to show current nearby activity.
+13. Admin opens Django Admin and creates/activates a Gravity Event or modifies an activity setting.
+14. Frontend reflects updated configuration.
+15. Show XP/badge/event reward.
+16. Show season/profile state.
+
+Optional wow moment:
+
+- add Pickleball through Django Admin and show the frontend receive it without source-code changes.
+
+---
+
+# 61. Hackathon Success Criteria
+
+A successful V1 should demonstrate:
+
+- live multi-user participation,
+- map heat changing in realtime,
+- flexible activity configuration,
+- geospatial logic,
+- activity-specific competition,
+- clear social/game progression,
+- deployable real-world product direction.
+
+A polished 10-feature demo is better than an unstable 30-feature demo.
+
+---
+
+# 62. Explicitly Deferred Features
+
+Not required for V1:
+
+- user-created communities,
+- community events,
+- territory ownership/conquest,
+- manually mapped venues,
+- city/state hierarchy,
+- full Instagram feed,
+- photo uploads,
+- sophisticated AI recommendations,
+- advanced anti-cheat,
+- native iOS/Android app,
+- marketplace/payments,
+- permanent seniority XP multiplier,
+- complex ML forecasting,
+- massive-scale distributed architecture.
+
+---
+
+# 63. Future Product Directions
+
+Possible future additions:
+
+- community creation,
+- community chats,
+- community-vs-community competition,
+- media feed,
+- activity photos,
+- venue profiles,
+- city/state/global rankings,
+- richer forecasting,
+- push notifications,
+- wearable integrations,
+- Apple Health/Google Fit,
+- advanced verification,
+- AI activity recommendations,
+- dynamic trending activity promotion,
+- event sponsorship,
+- public APIs.
+
+These are future directions, not V1 requirements.
+
+---
+
+# 64. Final Product Definition
+
+Gravity is:
+
+> A live map where real human activity creates visible social gravity.
+
+People do not merely post that they are active.
+
+They create a live signal by actually participating.
+
+The platform turns that participation into:
+
+- discovery,
+- competition,
+- progression,
+- social connection,
+- geographic reputation,
+- recurring real-world behavior.
+
+That is the core idea every implementation decision should protect.

@@ -157,7 +157,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
           refreshMap();
         }
       });
-      map.on('idle', refreshMap);
+      map.once('idle', refreshMap);
 
       // Fallback to OSM raster style if vector style encounters fatal errors
       map.on('error', (e: any) => {

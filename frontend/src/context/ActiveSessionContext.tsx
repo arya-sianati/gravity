@@ -4,10 +4,17 @@ import type { ActivitySession } from '../api/sessions';
 import { useAuth } from './AuthContext';
 import { useGravitySocket } from '../lib/realtime/useGravitySocket';
 
+interface BadgeEarned {
+  slug: string;
+  name: string;
+  icon: string;
+}
+
 interface XPFeedback {
   amount: number;
   levelUp: boolean;
   newLevel: number;
+  badges_earned: BadgeEarned[];
 }
 
 interface ActiveSessionContextType {
@@ -54,7 +61,8 @@ export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({
         setXpFeedback({
           amount: res.xp_awarded,
           levelUp: !!res.level_up,
-          newLevel: res.current_level
+          newLevel: res.current_level,
+          badges_earned: res.badges_earned || []
         });
         refreshUser();
         setTimeout(() => setXpFeedback(null), 5000);

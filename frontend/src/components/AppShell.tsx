@@ -13,15 +13,21 @@ export const AppShell: React.FC = () => {
 
       {/* XP Overlay Toast */}
       {xpFeedback && (
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-50 animate-bounce flex flex-col items-center pointer-events-none">
-          <div className="bg-indigo-600/90 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold text-lg shadow-[0_0_20px_rgba(79,70,229,0.5)] border border-indigo-400">
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-50 animate-bounce flex flex-col items-center pointer-events-none gap-2 w-full px-4 max-w-sm">
+          <div className="bg-indigo-600/90 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold text-lg shadow-[0_0_20px_rgba(79,70,229,0.5)] border border-indigo-400 whitespace-nowrap">
             +{xpFeedback.amount} XP
           </div>
           {xpFeedback.levelUp && (
-            <div className="mt-2 bg-yellow-500 text-black px-4 py-1 rounded-full font-black text-sm uppercase tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.6)]">
+            <div className="bg-yellow-500 text-black px-4 py-1 rounded-full font-black text-sm uppercase tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.6)] whitespace-nowrap">
               Level Up! Lv {xpFeedback.newLevel}
             </div>
           )}
+          {xpFeedback.badges_earned?.map(b => (
+            <div key={b.slug} className="bg-amber-600/95 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(217,119,6,0.6)] border border-amber-400 flex items-center space-x-2 w-max">
+              <span className="text-xl">{b.icon}</span>
+              <span>{b.name} Earned!</span>
+            </div>
+          ))}
         </div>
       )}
 

@@ -68,3 +68,31 @@ class MetricValueAdmin(admin.ModelAdmin):
     list_filter = ('metric__activity_type', 'metric')
     search_fields = ('participation__user__username', 'metric__name')
     readonly_fields = ('created_at', 'updated_at')
+
+from .models import XPTransaction, Badge, UserBadge, Streak
+
+@admin.register(XPTransaction)
+class XPTransactionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'amount', 'reason', 'created_at')
+    list_filter = ('reason',)
+    search_fields = ('user__username',)
+
+@admin.register(Badge)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_active', 'icon')
+    prepopulated_fields = {'slug': ('name',)}
+    list_filter = ('is_active',)
+    search_fields = ('name', 'slug')
+
+@admin.register(UserBadge)
+class UserBadgeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'badge', 'earned_at', 'activity_type')
+    list_filter = ('badge',)
+    search_fields = ('user__username', 'badge__name')
+    readonly_fields = ('user', 'badge', 'earned_at', 'activity_type', 'metadata')
+
+@admin.register(Streak)
+class StreakAdmin(admin.ModelAdmin):
+    list_display = ('user', 'current_count', 'longest_count', 'last_qualified_date')
+    search_fields = ('user__username',)
+    readonly_fields = ('user', 'longest_count')

@@ -97,3 +97,35 @@ class XPHistoryAPIView(APIView):
                 "created_at": xpt.created_at.isoformat()
             })
         return Response(data, status=status.HTTP_200_OK)
+
+class MyBadgesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from activities.models import UserBadge
+        user_badges = UserBadge.objects.filter(user=request.user).select_related('badge', 'activity_type').order_by('-earned_at')
+        
+        data = []
+        for ub in user_badges:
+            data.append({
+                "slug": ub.badge.slug,
+                "name": ub.badge.name,
+                "description": ub.badge.description,
+                "icon": ub.badge.icon,
+                "earned_at": ub.earned_at.isoformat(),
+                "activity_type": ub.activity_type.name if ub.activity_type else None
+            })
+        
+        # Also return streak stats for profile rendering convenience
+        from activities.models import Streak
+        from activities.logic.streak_service import get_effective_streak
+        streak = Streak.objects.filter(user=request.user).first()
+        streak_data = {
+            "current": get_effective_streak(streak),
+            "longest": streak.longest_count if streak else 0
+        }
+        
+        return Response({
+            "badges": data,
+            "streak": streak_data
+        }, status=status.HTTP_200_OK)

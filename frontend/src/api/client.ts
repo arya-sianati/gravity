@@ -119,3 +119,26 @@ export const getXPHistory = async (): Promise<XPTransaction[]> => {
   const response = await apiClient.get<XPTransaction[]>('/me/xp-history/');
   return response.data;
 };
+
+export interface BadgeEarned {
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned_at: string;
+}
+
+export interface StreakInfo {
+  current: number;
+  longest: number;
+}
+
+export interface MyBadgesResponse {
+  badges: BadgeEarned[];
+  streak: StreakInfo;
+}
+
+export const getMyBadges = async (): Promise<MyBadgesResponse> => {
+  const response = await apiClient.get<MyBadgesResponse>('/me/badges/');
+  return response.data;
+};

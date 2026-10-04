@@ -54,6 +54,8 @@ export interface LeaveSessionResponse {
   xp_awarded: number | null;
   level_up: boolean;
   current_level: number;
+  streak: { current: number, longest: number } | null;
+  badges_earned: { slug: string, name: string, icon: string }[];
 }
 
 export const leaveSession = async (sessionId: string): Promise<LeaveSessionResponse> => {

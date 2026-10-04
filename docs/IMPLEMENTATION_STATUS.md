@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 12 — Leaderboard Filtering & Scopes
+Phase 13 — Gravity Events
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -18,13 +18,12 @@ Phase 12 — Leaderboard Filtering & Scopes
 - Phase 09 - Realtime WebSockets
 - Phase 10 - Metrics & Activity Leaderboards
 - Phase 11 - Gravity XP & Levels
-  - Built `XPTransaction` ledger model tracking history, reason, and context.
-  - Implemented `xp_service.py` to deterministically allocate XP and calculate derived `level_for_xp` mathematically via bounded curves.
-  - Integrated Participation XP completion hook into `leave` event with server-based minimum duration thresholds (`GRAVITY_MIN_XP_DURATION_SECONDS`).
-  - Added idempotency protecting against duplicate participation XP using DB unique constraints.
-  - Completed endpoints for `GET /api/me/xp-history/` and payload expansions for user profile logic.
-  - Wired frontend `ProfileScreen.tsx` with dynamic level progression bar overlay.
-  - Implemented realtime `+XP / Level Up!` toast overlay gracefully rendered directly across the `AppShell`.
+- Phase 12 - Badges & Consistency
+  - Added models `Badge`, `UserBadge`, `Streak`.
+  - Constructed strictly decoupled evaluation logic in `achievement_service.py` and `streak_service.py`.
+  - Registered idempotent completion response merging streak state, awarded XP, and newly earned badges in the same REST sequence natively.
+  - Profile updated displaying dynamic Streak metrics, Longest Streak bounds, and visual array of earned badges.
+  - Safe seeding configuration injected enabling administrator overrides to persist safely via `seed_badges`.
 
 ## In progress
 - None
@@ -34,7 +33,6 @@ Phase 12 — Leaderboard Filtering & Scopes
 
 ## Deferred
 - Full privacy settings UI remains deferred to P1 / Phase 16 as approved.
-- `season` period filtering on Leaderboards is intentionally returning 501 until Phase 14 implements Season logic.
 
 ## Setup / migration commands
 ```bash
@@ -42,9 +40,10 @@ Phase 12 — Leaderboard Filtering & Scopes
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt # (or directly via pip for now)
+pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_gravity
+python manage.py seed_badges
 
 # Setup frontend
 cd frontend
@@ -53,4 +52,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 12: Leaderboard Filtering & Scopes.
+Begin Phase 13: Gravity Events.

@@ -249,3 +249,40 @@ class XPTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} {self.amount:+d} XP ({self.reason})"
+
+class Badge(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    description = models.TextField()
+    icon = models.CharField(max_length=50) # e.g. emoji or icon class
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class UserBadge(models.Model):
+    user = models.ForeignKey(User, related_name='badges', on_delete=models.CASCADE)
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE)
+    activity_type = models.ForeignKey('ActivityType', null=True, blank=True, on_delete=models.SET_NULL)
+    earned_at = models.DateTimeField(auto_now_add=True)
+    metadata = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'badge'], name='unique_user_badge')
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.badge.name}"
+
+class Streak(models.Model):
+    user = models.OneToOneField(User, related_name='streak', on_delete=models.CASCADE)
+    current_count = models.PositiveIntegerField(default=0)
+    longest_count = models.PositiveIntegerField(default=0)
+    last_qualified_date = models.DateField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - Streak: {self.current_count} (Longest: {self.longest_count})"

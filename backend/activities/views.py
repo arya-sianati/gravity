@@ -168,8 +168,14 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
         # Phase 11: Award XP
         min_duration = getattr(settings, 'GRAVITY_MIN_XP_DURATION_SECONDS', 60)
         from .logic.xp_service import award_xp
+        from .logic.streak_service import evaluate_streak
+        from .logic.achievement_service import evaluate_after_participation
+        
         xp_awarded = None
         level_up = False
+        streak_state = None
+        badges_earned = []
+        
         if duration_seconds >= min_duration:
             old_level = request.user.current_level
             xpt = award_xp(
@@ -180,6 +186,23 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
                 participation=participation,
                 activity_type=session.activity_type
             )
+            
+            # Phase 12: Evaluate streak
+            streak, incremented, _ = evaluate_streak(request.user, participation)
+            streak_state = {
+                "current": streak.current_count,
+                "longest": streak.longest_count
+            }
+            
+            # Phase 12: Evaluate badges
+            earned_list = evaluate_after_participation(request.user, participation, streak)
+            for b in earned_list:
+                badges_earned.append({
+                    "slug": b.slug,
+                    "name": b.name,
+                    "icon": b.icon
+                })
+
             if xpt:
                 request.user.refresh_from_db()
                 xp_awarded = xpt.amount
@@ -196,7 +219,9 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
             "detail": "Successfully left the session.",
             "xp_awarded": xp_awarded,
             "level_up": level_up,
-            "current_level": request.user.current_level
+            "current_level": request.user.current_level,
+            "streak": streak_state,
+            "badges_earned": badges_earned
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])

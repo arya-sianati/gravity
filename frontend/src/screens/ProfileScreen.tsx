@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getXPHistory } from '../api/client';
-import type { XPTransaction } from '../api/client';
+import { getXPHistory, getMyBadges } from '../api/client';
+import type { XPTransaction, BadgeEarned, StreakInfo } from '../api/client';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, updateProfile } = useAuth();
@@ -12,10 +12,16 @@ export const ProfileScreen: React.FC = () => {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   
   const [history, setHistory] = useState<XPTransaction[]>([]);
+  const [badges, setBadges] = useState<BadgeEarned[]>([]);
+  const [streak, setStreak] = useState<StreakInfo | null>(null);
 
   useEffect(() => {
     if (user) {
       getXPHistory().then(setHistory).catch(() => {});
+      getMyBadges().then(res => {
+        setBadges(res.badges);
+        setStreak(res.streak);
+      }).catch(() => {});
     }
   }, [user]);
 
@@ -155,6 +161,41 @@ export const ProfileScreen: React.FC = () => {
           <span className="text-[10px] text-gray-500">{nextLevelXp}</span>
         </div>
       </div>
+
+      {/* Streak */}
+      {streak && (
+        <div className="mt-4 p-3.5 bg-gray-900/50 rounded-xl border border-gray-800/80 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Activity Streak</span>
+            <div className="text-2xl font-extrabold text-orange-500 mt-0.5 flex items-center space-x-2">
+              <span>{streak.current} Days</span>
+              {streak.current > 0 && <span className="text-lg">🔥</span>}
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Longest</span>
+            <div className="text-lg font-bold text-gray-300 mt-0.5">{streak.longest}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Badges */}
+      {badges.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">Badges Earned</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {badges.map(b => (
+              <div key={b.slug} className="p-3 bg-gray-900/40 rounded-xl border border-gray-800/50 flex flex-col items-center text-center space-y-2">
+                <div className="text-3xl">{b.icon}</div>
+                <div>
+                  <div className="text-sm font-bold text-gray-200">{b.name}</div>
+                  <div className="text-[10px] text-gray-500 leading-tight mt-1">{b.description}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* History */}
       {history.length > 0 && (

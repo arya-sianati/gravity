@@ -103,11 +103,20 @@ export function useGravitySocket(urlPath: string | null) {
       }
     };
 
+    const handleOnline = () => {
+      if (urlPath && wsRef.current?.readyState !== WebSocket.OPEN && wsRef.current?.readyState !== WebSocket.CONNECTING) {
+        reconnectAttempts.current = 0;
+        connect();
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
 
     return () => {
       isComponentMounted.current = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
       if (wsRef.current) {
         wsRef.current.close(1000, 'Component unmounted');
         wsRef.current = null;

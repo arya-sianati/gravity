@@ -124,6 +124,25 @@ export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     refreshActiveSession();
+
+    const handleReconcile = () => {
+      refreshActiveSession();
+      if (user) refreshUser();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handleReconcile();
+      }
+    };
+
+    window.addEventListener('online', handleReconcile);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('online', handleReconcile);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [user]);
 
   // Periodic heartbeat every 25 seconds & visibilitychange handling

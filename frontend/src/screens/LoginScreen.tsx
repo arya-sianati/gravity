@@ -42,7 +42,7 @@ export const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen max-w-md mx-auto bg-black text-white p-6 justify-center">
+    <div className="flex flex-col min-h-[100dvh] max-w-md mx-auto bg-black text-white p-6 justify-center pt-safe pb-safe overflow-y-auto">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">
           GRAVITY

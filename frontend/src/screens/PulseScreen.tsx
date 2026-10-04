@@ -5,7 +5,7 @@ import type { ActivityType } from '../api/activities';
 import { getPulseNow, getPulseSoon } from '../api/pulse';
 import type { PulseItem, PulseSoonItem } from '../api/pulse';
 import { joinSession } from '../api/sessions';
-import { requestCurrentLocation } from '../lib/map/geolocation';
+import { requestCurrentLocation, formatGeolocationErrorMessage, LOCATION_PRIVACY_EXPLANATION } from '../lib/map/geolocation';
 import { useGravitySocket } from '../lib/realtime/useGravitySocket';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { AreaHistoryModal } from '../components/history/AreaHistoryModal';
@@ -54,15 +54,7 @@ export const PulseScreen: React.FC = () => {
       },
       (err) => {
         setLocating(false);
-        let msg = 'Unable to determine your location.';
-        if (err.code === 1) {
-          msg = 'Location permission was denied. Please enable location to discover activity around you.';
-        } else if (err.code === 2) {
-          msg = 'Location is currently unavailable.';
-        } else if (err.code === 3) {
-          msg = 'Location request timed out. Please try again.';
-        }
-        setLocationError(msg);
+        setLocationError(formatGeolocationErrorMessage(err));
       }
     );
   }, []);
@@ -317,6 +309,7 @@ export const PulseScreen: React.FC = () => {
             <div className="space-y-1">
               <h2 className="text-base font-semibold text-white">Location Access Needed</h2>
               <p className="text-xs text-gray-400 max-w-xs">{locationError}</p>
+              <p className="text-[11px] text-gray-500 max-w-xs mt-1">{LOCATION_PRIVACY_EXPLANATION}</p>
             </div>
             <button
               onClick={acquireLocation}

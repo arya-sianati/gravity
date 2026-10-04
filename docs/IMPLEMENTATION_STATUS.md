@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 20 — Pulse Soon / Historical Forecasting (Complete)
+Phase 21 — PWA / Mobile Polish (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -71,9 +71,19 @@ Phase 20 — Pulse Soon / Historical Forecasting (Complete)
   - Frontend Pulse screen segmented control (`Pulse Now` / `Pulse Soon`) with confidence pills (Very strong / Strong / Moderate pattern), pattern explanation reasons, historical evidence metrics, and Gravity Event XP bonus integration.
   - Frontend MapLibre overlay: distinct translucent fill (`pulse-soon-fill`) and patterned dashed outline (`pulse-soon-outline`) with interactive inspection popups and a forecast toggle control.
   - Dedicated automated test suite in `activities/tests_phase20.py` (18 comprehensive tests; 185 tests passing repository-wide).
+- Phase 21 - PWA / Mobile Polish
+  - Full PWA installability configured via `vite-plugin-pwa` with web manifest (name: Gravity, theme `#030712`, background `#000000`, display: standalone, portrait orientation, icons 192x192, 512x512, 512x512 maskable).
+  - Conservative Workbox caching: app shell and static assets precached; network-authoritative live data for `/api/`, `/ws/`, and `/admin/`.
+  - Offline/degraded experience with global offline banner and automatic state recovery on reconnect.
+  - Native PWA update prompt notifying users when a new service worker is installed with "Refresh" action invoking `SKIP_WAITING`.
+  - Mobile safe areas and dynamic viewport handling: `env(safe-area-inset-top/bottom)`, `100dvh`, `-webkit-tap-highlight-color: transparent`, `touch-action: manipulation`, `.pt-safe`, `.pb-safe`, and `prefers-reduced-motion`.
+  - Bottom navigation polish with 5 primary surfaces (Map, Pulse, Friends, Rank, Profile) and $\ge 44\times 44$px touch targets.
+  - Route-level lazy loading (`React.lazy` + `Suspense`), reducing the initial application bundle from 1.48MB to 265kB.
+  - Touch targets and mobile form handling: `inputMode="numeric"`/`"decimal"`, responsive QR code scaling, and "Copy Join Link" clipboard action.
+  - Standardized location UX with user-friendly error formatting and educational privacy copy.
 
 ## Next phase
-- Phase 21 — PWA Polish / Final Hardening
+- Phase 22 — Production Deployment & Demo Hardening
 
 ## In progress
 - None
@@ -102,4 +112,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 21: PWA Polish / Final Hardening.
+Begin Phase 22: Production Deployment & Demo Hardening.

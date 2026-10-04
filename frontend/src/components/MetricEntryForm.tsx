@@ -86,31 +86,33 @@ export const MetricEntryForm = forwardRef<MetricEntryFormHandle, Props>(({ parti
         const val = values[m.slug] || '';
         if (m.data_type === 'boolean') {
           return (
-             <div key={m.slug} className="flex justify-between items-center text-sm">
+             <div key={m.slug} className="flex justify-between items-center text-sm min-h-[44px]">
                 <span className="text-gray-400">{m.name} {m.required ? '*' : ''}</span>
                 <button 
                   onClick={() => handleToggle(m.slug)}
-                  className={`w-12 h-6 rounded-full transition-colors ${val === '1' ? 'bg-blue-600' : 'bg-gray-600'} relative`}
+                  className={`w-12 h-7 rounded-full transition-colors ${val === '1' ? 'bg-indigo-600' : 'bg-gray-600'} relative p-1 active:scale-95`}
+                  aria-label={`Toggle ${m.name}`}
                 >
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${val === '1' ? 'left-7' : 'left-1'}`} />
+                  <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${val === '1' ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
              </div>
           );
         }
         
         return (
-          <div key={m.slug} className="flex justify-between items-center text-sm gap-2">
+          <div key={m.slug} className="flex justify-between items-center text-sm gap-2 min-h-[44px]">
             <label className="text-gray-400 whitespace-nowrap flex-1 text-left">{m.name} {m.required ? '*' : ''}</label>
             <div className="flex items-center gap-2">
               <input 
                 type="number"
-                step={m.data_type === 'integer' ? "1" : "any"}
+                inputMode={m.data_type === 'integer' ? 'numeric' : 'decimal'}
+                step={m.data_type === 'integer' ? '1' : 'any'}
                 value={val}
                 onChange={e => handleChange(m.slug, e.target.value)}
-                className="w-20 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-right"
+                className="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-2 text-white text-right text-base focus:border-indigo-500 focus:outline-none"
                 placeholder="-"
               />
-              {m.unit && <span className="text-gray-500 text-xs w-8">{m.unit}</span>}
+              {m.unit && <span className="text-gray-400 text-xs w-8">{m.unit}</span>}
             </div>
           </div>
         );

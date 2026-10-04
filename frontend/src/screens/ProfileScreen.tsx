@@ -87,7 +87,7 @@ export const ProfileScreen: React.FC = () => {
         <h1 className="text-xl font-bold tracking-tight">Profile</h1>
         <button
           onClick={logout}
-          className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-900/60"
+          className="text-xs text-red-400 hover:text-red-300 font-medium px-3.5 py-2.5 rounded-xl bg-red-950/40 border border-red-900/60 active:scale-95 min-h-[44px] flex items-center"
         >
           Sign Out
         </button>
@@ -280,8 +280,16 @@ export const ProfileScreen: React.FC = () => {
             return (
               <div
                 key={opt.mode}
+                role="button"
+                tabIndex={0}
                 onClick={() => handlePrivacyChange(opt.mode)}
-                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start space-x-3 ${
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handlePrivacyChange(opt.mode);
+                  }
+                }}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start space-x-3 min-h-[48px] active:scale-[0.99] ${
                   isSelected
                     ? 'bg-indigo-950/40 border-indigo-600/80 shadow-md shadow-indigo-950/50'
                     : 'bg-gray-900/40 border-gray-800/60 hover:bg-gray-800/40 hover:border-gray-700/60'

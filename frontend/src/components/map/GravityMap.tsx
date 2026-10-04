@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
-import { requestCurrentLocation } from '../../lib/map/geolocation';
+import { requestCurrentLocation, formatGeolocationErrorMessage } from '../../lib/map/geolocation';
 import { getActivities } from '../../api/activities';
 import type { ActivityType } from '../../api/activities';
 import { getLiveMap } from '../../api/map';
@@ -222,11 +222,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
       },
       (err) => {
         setLocating(false);
-        let msg = "Location unavailable.";
-        if (err.code === 1) msg = "Location permission denied.";
-        else if (err.code === 2) msg = "Position unavailable.";
-        else if (err.code === 3) msg = "Location request timed out.";
-        setGeoError(msg);
+        setGeoError(formatGeolocationErrorMessage(err));
       }
     );
   }, []);

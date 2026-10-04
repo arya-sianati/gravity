@@ -926,13 +926,20 @@ export const FriendsScreen: React.FC = () => {
 
       {/* CREATE CHALLENGE MODAL */}
       {showCreateChallengeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          onClick={() => setShowCreateChallengeModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm pt-safe pb-safe"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full p-5 space-y-4 max-h-[calc(100dvh-2.5rem)] overflow-y-auto"
+          >
             <div className="flex justify-between items-center pb-2 border-b border-gray-800">
               <h3 className="font-bold text-base text-gray-100">Create Friend Challenge</h3>
               <button
                 onClick={() => setShowCreateChallengeModal(false)}
-                className="text-gray-400 hover:text-white p-1"
+                className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white"
+                aria-label="Close modal"
               >
                 ✕
               </button>
@@ -1020,6 +1027,7 @@ export const FriendsScreen: React.FC = () => {
                   <input
                     type="number"
                     step="any"
+                    inputMode="decimal"
                     value={createTargetValue}
                     onChange={(e) => setCreateTargetValue(e.target.value)}
                     required
@@ -1102,8 +1110,14 @@ export const FriendsScreen: React.FC = () => {
 
       {/* USER PROFILE MODAL */}
       {selectedProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl max-w-sm w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          onClick={() => setSelectedProfile(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm pt-safe pb-safe"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-gray-900 border border-gray-800 rounded-2xl max-w-sm w-full p-5 space-y-4 max-h-[calc(100dvh-2.5rem)] overflow-y-auto"
+          >
             <div className="flex justify-between items-start">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-lg text-white">
@@ -1118,7 +1132,8 @@ export const FriendsScreen: React.FC = () => {
               </div>
               <button
                 onClick={() => setSelectedProfile(null)}
-                className="text-gray-400 hover:text-white p-1"
+                className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white"
+                aria-label="Close profile modal"
               >
                 ✕
               </button>

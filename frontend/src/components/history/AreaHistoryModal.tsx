@@ -67,13 +67,16 @@ export const AreaHistoryModal: React.FC<AreaHistoryModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in pt-safe pb-safe"
+    >
       <div
-        className="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl text-white"
+        className="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-lg max-h-[calc(100dvh-2.5rem)] flex flex-col overflow-hidden shadow-2xl text-white"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <header className="px-5 py-4 border-b border-gray-800 flex justify-between items-center bg-gray-900/90">
+        <header className="px-5 py-4 border-b border-gray-800 flex justify-between items-center bg-gray-900/90 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl">🏛️</span>
@@ -85,8 +88,9 @@ export const AreaHistoryModal: React.FC<AreaHistoryModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+            className="w-10 h-10 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors active:scale-95"
             title="Close"
+            aria-label="Close modal"
           >
             ✕
           </button>

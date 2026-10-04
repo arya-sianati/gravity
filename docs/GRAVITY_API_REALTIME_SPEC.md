@@ -69,8 +69,7 @@ Request:
 
 ```json
 {
-  "activity_type": "other",
-  "label": "pickleball",
+  "activity_type": "basketball",
   "latitude": 38.0,
   "longitude": -93.0,
   "privacy_mode": "blurred"

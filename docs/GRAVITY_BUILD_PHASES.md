@@ -100,6 +100,7 @@ Allow real users.
 - auth state
 - logout
 - profile basics
+- privacy setting UI
 
 ## Exit criteria
 - two independent users can register/login,
@@ -437,7 +438,6 @@ Add social connection.
 - requests
 - friend list
 - friend activity
-- privacy setting UI
 
 ## Exit criteria
 - users can become friends,

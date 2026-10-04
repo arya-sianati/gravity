@@ -856,10 +856,10 @@ No named venue is required.
 Each user has location-sharing preferences.
 
 ## Hidden
-Exact coordinates are stored privately in the database for logic/auto-stop, but are strictly never exposed via APIs, WebSockets, map data, or logs. User contributes to aggregated stats/heat where safe, but no identifiable live location is shown.
+User contributes to aggregated stats/heat where safe, but no identifiable live location is shown.
 
 ## Blurred / Approximate
-Exact coordinates are stored privately, but the user appears only as part of an approximate geographic area in all public outputs.
+User appears only as part of an approximate geographic area.
 
 ## Friends Only
 Approved friends may receive more precise activity/location context.

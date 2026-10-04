@@ -2,7 +2,7 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 export const AppShell: React.FC = () => {
-  const { xpFeedback } = useActiveSession();
+  const { xpFeedback, autoStopFeedback, clearAutoStopFeedback } = useActiveSession();
 
   return (
     <div className="flex flex-col h-full w-full max-w-md mx-auto bg-black relative shadow-lg overflow-hidden">
@@ -10,6 +10,22 @@ export const AppShell: React.FC = () => {
       <main className="flex-1 flex flex-col relative overflow-hidden">
         <Outlet />
       </main>
+
+      {/* Auto-Stop Feedback Toast (Phase 18 Requirement 22) */}
+      {autoStopFeedback && (
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between bg-amber-950/90 border border-amber-600/70 text-amber-200 px-4 py-3 rounded-2xl shadow-2xl max-w-sm w-full mx-4 backdrop-blur-md">
+          <div className="flex items-center space-x-2 text-xs font-medium">
+            <span className="text-base">📍</span>
+            <span>{autoStopFeedback}</span>
+          </div>
+          <button
+            onClick={clearAutoStopFeedback}
+            className="text-amber-400 hover:text-white text-xs font-bold ml-2 p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* XP Overlay Toast */}
       {xpFeedback && (

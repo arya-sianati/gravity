@@ -63,6 +63,21 @@ export const leaveSession = async (sessionId: string): Promise<LeaveSessionRespo
   return res.data;
 };
 
+export interface HeartbeatResponse {
+  participation_status: string;
+  inside_activity_area: boolean;
+  outside_since: string | null;
+  grace_remaining_seconds: number | null;
+  auto_stopped: boolean;
+  already_concluded?: boolean;
+  completion?: LeaveSessionResponse;
+}
+
+export const sendActivityHeartbeat = async (lat: number, lng: number): Promise<HeartbeatResponse> => {
+  const response = await apiClient.post<HeartbeatResponse>('/api/me/activity-location/', { lat, lng });
+  return response.data;
+};
+
 export const getNearbySessions = async (activitySlug: string, lat: number, lng: number): Promise<NearbySession[]> => {
   const response = await apiClient.get<NearbySession[]>('/api/sessions/nearby/', {
     params: { activity: activitySlug, lat, lng }

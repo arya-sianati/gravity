@@ -13,6 +13,8 @@ class Command(BaseCommand):
                 'name': 'Basketball', 'slug': 'basketball', 'icon': '🏀', 'color': '#F59E0B',
                 'description': 'Play a pickup game of basketball.',
                 'sort_order': 10, 'cluster_radius_m': 200, 'join_suggestion_radius_m': 500,
+                'auto_stop_enabled': True, 'auto_stop_mode': ActivityType.AutoStopMode.ANCHOR_RADIUS,
+                'auto_stop_radius_m': 100.0, 'auto_stop_grace_seconds': 300,
                 'metrics': [
                     {'name': 'Points', 'slug': 'points', 'data_type': ActivityMetric.DataType.INTEGER, 'aggregation': ActivityMetric.AggregationMode.SUM, 'is_primary': True, 'xp_weight': 1.0, 'sort_order': 10}
                 ]
@@ -21,6 +23,7 @@ class Command(BaseCommand):
                 'name': 'Running', 'slug': 'running', 'icon': '🏃', 'color': '#3B82F6',
                 'description': 'Go for a run.',
                 'sort_order': 20, 'gps_tracking_enabled': True,
+                'auto_stop_enabled': False, 'auto_stop_mode': ActivityType.AutoStopMode.DISABLED,
                 'metrics': [
                     {'name': 'Distance', 'slug': 'distance', 'unit': 'km', 'data_type': ActivityMetric.DataType.DECIMAL, 'aggregation': ActivityMetric.AggregationMode.SUM, 'is_primary': True, 'xp_weight': 2.0, 'sort_order': 10},
                     {'name': 'Duration', 'slug': 'duration', 'unit': 'min', 'data_type': ActivityMetric.DataType.DURATION, 'aggregation': ActivityMetric.AggregationMode.SUM, 'xp_weight': 1.0, 'sort_order': 20},
@@ -30,6 +33,7 @@ class Command(BaseCommand):
                 'name': 'Gaming', 'slug': 'gaming', 'icon': '🎮', 'color': '#8B5CF6',
                 'description': 'Play video games with others.',
                 'sort_order': 30, 'qr_join_enabled': True,
+                'auto_stop_enabled': False, 'auto_stop_mode': ActivityType.AutoStopMode.DISABLED,
                 'metrics': [
                     {'name': 'Wins', 'slug': 'wins', 'data_type': ActivityMetric.DataType.INTEGER, 'aggregation': ActivityMetric.AggregationMode.SUM, 'is_primary': True, 'xp_weight': 3.0, 'sort_order': 10}
                 ]
@@ -38,6 +42,8 @@ class Command(BaseCommand):
                 'name': 'Studying', 'slug': 'studying', 'icon': '📚', 'color': '#10B981',
                 'description': 'Study sessions.',
                 'sort_order': 40, 'auto_stop_enabled': True,
+                'auto_stop_mode': ActivityType.AutoStopMode.ANCHOR_RADIUS,
+                'auto_stop_radius_m': 100.0, 'auto_stop_grace_seconds': 300,
                 'metrics': [
                     {'name': 'Hours', 'slug': 'hours', 'unit': 'hr', 'data_type': ActivityMetric.DataType.DECIMAL, 'aggregation': ActivityMetric.AggregationMode.SUM, 'is_primary': True, 'xp_weight': 1.5, 'sort_order': 10}
                 ]
@@ -45,7 +51,9 @@ class Command(BaseCommand):
             {
                 'name': 'Workout', 'slug': 'workout', 'icon': '💪', 'color': '#EF4444',
                 'description': 'Gym and fitness workouts.',
-                'sort_order': 50,
+                'sort_order': 50, 'auto_stop_enabled': True,
+                'auto_stop_mode': ActivityType.AutoStopMode.ANCHOR_RADIUS,
+                'auto_stop_radius_m': 100.0, 'auto_stop_grace_seconds': 300,
                 'metrics': [
                     {'name': 'Calories', 'slug': 'calories', 'unit': 'kcal', 'data_type': ActivityMetric.DataType.INTEGER, 'aggregation': ActivityMetric.AggregationMode.SUM, 'is_primary': True, 'xp_weight': 0.1, 'sort_order': 10}
                 ]
@@ -53,7 +61,9 @@ class Command(BaseCommand):
             {
                 'name': 'Soccer', 'slug': 'soccer', 'icon': '⚽', 'color': '#22C55E',
                 'description': 'Play soccer.',
-                'sort_order': 60,
+                'sort_order': 60, 'auto_stop_enabled': True,
+                'auto_stop_mode': ActivityType.AutoStopMode.ANCHOR_RADIUS,
+                'auto_stop_radius_m': 150.0, 'auto_stop_grace_seconds': 300,
                 'metrics': [
                     {'name': 'Goals', 'slug': 'goals', 'data_type': ActivityMetric.DataType.INTEGER, 'aggregation': ActivityMetric.AggregationMode.SUM, 'is_primary': True, 'xp_weight': 5.0, 'sort_order': 10}
                 ]
@@ -61,7 +71,8 @@ class Command(BaseCommand):
             {
                 'name': 'Other', 'slug': 'other', 'icon': '✨', 'color': '#6B7280',
                 'description': 'Any other activity.',
-                'sort_order': 999,
+                'sort_order': 999, 'auto_stop_enabled': False,
+                'auto_stop_mode': ActivityType.AutoStopMode.DISABLED,
                 'metrics': [
                     {'name': 'Duration', 'slug': 'duration', 'unit': 'min', 'data_type': ActivityMetric.DataType.DURATION, 'aggregation': ActivityMetric.AggregationMode.SUM, 'is_primary': True, 'xp_weight': 1.0, 'sort_order': 10}
                 ]

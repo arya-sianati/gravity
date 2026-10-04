@@ -8,8 +8,8 @@ class ActivityMetricInline(admin.TabularInline):
 
 @admin.register(ActivityType)
 class ActivityTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'icon', 'is_active', 'sort_order', 'cluster_radius_m', 'updated_at')
-    list_filter = ('is_active', 'self_start_enabled', 'qr_join_enabled', 'gps_tracking_enabled')
+    list_display = ('name', 'slug', 'icon', 'is_active', 'auto_stop_enabled', 'auto_stop_mode', 'sort_order', 'cluster_radius_m', 'updated_at')
+    list_filter = ('is_active', 'auto_stop_enabled', 'auto_stop_mode', 'self_start_enabled', 'qr_join_enabled', 'gps_tracking_enabled')
     search_fields = ('name', 'slug', 'description')
     prepopulated_fields = {'slug': ('name',)}
     inlines = [ActivityMetricInline]
@@ -26,7 +26,7 @@ class ActivityTypeAdmin(admin.ModelAdmin):
             'fields': ('self_start_enabled', 'qr_join_enabled', 'gps_tracking_enabled')
         }),
         ('Auto-Stop', {
-            'fields': ('auto_stop_enabled', 'auto_stop_radius_m', 'auto_stop_grace_seconds')
+            'fields': ('auto_stop_enabled', 'auto_stop_mode', 'auto_stop_radius_m', 'auto_stop_grace_seconds')
         }),
         ('Scoring / Heatmap', {
             'fields': ('default_xp', 'heat_weight_multiplier')
@@ -42,8 +42,8 @@ from .models import ActivitySession, Participation
 class ParticipationInline(admin.TabularInline):
     model = Participation
     extra = 0
-    readonly_fields = ('joined_at', 'left_at')
-    fields = ('user', 'status', 'join_method', 'joined_at', 'left_at')
+    readonly_fields = ('joined_at', 'left_at', 'outside_since', 'last_heartbeat_at')
+    fields = ('user', 'status', 'join_method', 'outside_since', 'last_heartbeat_at', 'joined_at', 'left_at')
 
 @admin.register(ActivitySession)
 class ActivitySessionAdmin(admin.ModelAdmin):
@@ -55,10 +55,10 @@ class ActivitySessionAdmin(admin.ModelAdmin):
 
 @admin.register(Participation)
 class ParticipationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'session', 'status', 'join_method', 'joined_at')
+    list_display = ('id', 'user', 'session', 'status', 'join_method', 'outside_since', 'last_heartbeat_at', 'joined_at')
     list_filter = ('status', 'join_method')
     search_fields = ('user__username', 'session__id')
-    readonly_fields = ('joined_at', 'left_at', 'created_at', 'updated_at')
+    readonly_fields = ('joined_at', 'left_at', 'outside_since', 'last_heartbeat_at', 'last_location', 'created_at', 'updated_at')
 
 from .models import MetricValue
 

@@ -28,8 +28,19 @@ class ActivityType(models.Model):
     qr_join_enabled = models.BooleanField(default=True)
     gps_tracking_enabled = models.BooleanField(default=False)
 
+    class AutoStopMode(models.TextChoices):
+        DISABLED = 'disabled', 'Disabled'
+        ANCHOR_RADIUS = 'anchor_radius', 'Anchor Radius'
+        INACTIVITY = 'inactivity', 'Inactivity'
+
     # Auto-stop
     auto_stop_enabled = models.BooleanField(default=True)
+    auto_stop_mode = models.CharField(
+        max_length=20,
+        choices=AutoStopMode.choices,
+        default=AutoStopMode.ANCHOR_RADIUS,
+        help_text="Mode governing auto-stop behavior"
+    )
     auto_stop_radius_m = models.FloatField(
         default=100.0,
         validators=[MinValueValidator(0.0)],
@@ -56,6 +67,14 @@ class ActivityType(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        if self.auto_stop_enabled and self.auto_stop_mode == self.AutoStopMode.ANCHOR_RADIUS:
+            if self.auto_stop_radius_m is None or self.auto_stop_radius_m <= 0:
+                raise ValidationError({'auto_stop_radius_m': 'auto_stop_radius_m must be greater than 0 for anchor_radius mode.'})
+            if self.auto_stop_grace_seconds is None or self.auto_stop_grace_seconds < 0:
+                raise ValidationError({'auto_stop_grace_seconds': 'auto_stop_grace_seconds must be non-negative.'})
 
 class ActivityMetric(models.Model):
     class DataType(models.TextChoices):
@@ -167,8 +186,10 @@ class Participation(models.Model):
     joined_at = models.DateTimeField(auto_now_add=True)
     left_at = models.DateTimeField(null=True, blank=True)
     
-    # Placeholders for future auto-stop & heartbeats
+    # Auto-stop & heartbeats
     outside_since = models.DateTimeField(null=True, blank=True)
+    last_heartbeat_at = models.DateTimeField(null=True, blank=True)
+    last_location = gis_models.PointField(srid=4326, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

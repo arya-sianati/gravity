@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 17 — Friend Challenges (Complete)
+Phase 18 — Auto-Stop & Session Integrity (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -41,9 +41,22 @@ Phase 17 — Friend Challenges (Complete)
   - Realtime challenge notifications via Channels consumer `GravityChallengeConsumer` routed at `/ws/gravity/challenge/<id>/`.
   - Frontend TypeScript API client `frontend/src/api/challenges.ts` and interactive UI in `FriendsScreen.tsx` (Challenges tab, filter chips, challenge creator modal, progress bars, winner badges, invitation accept/decline/cancel actions).
   - Dedicated test suite `activities/tests_phase17.py` (16 comprehensive tests; 136 tests passing repository-wide).
+- Phase 18 - Auto-Stop & Session Integrity
+  - Configurable `auto_stop_mode` (`disabled`, `anchor_radius`, `inactivity`) and validation on `ActivityType`, distinguishing stationary-area activities from movement activities (e.g. Basketball vs Running).
+  - PostGIS spherical anchor radius calculations comparing participant coordinates against exact session anchor (`Distance('location', point)`).
+  - Heartbeat tracking fields on `Participation`: `last_heartbeat_at`, `outside_since`, and `last_location` without storing a permanent GPS trail or leaking coordinates.
+  - Grace period state machine: inside resets `outside_since`; outside begins grace timer; continued outside >= `auto_stop_grace_seconds` triggers auto-stop; returns inside resets grace. Support for zero grace.
+  - Authoritative, unified lifecycle service `finalize_participation` shared between manual leave and auto-stop with row-locking concurrency protection (`select_for_update`) and idempotent XP/streak/badge/event/challenge evaluations.
+  - Dedicated endpoints `POST /api/me/activity-location/` and `POST /api/participations/<id>/heartbeat/` returning privacy-safe state.
+  - Django Admin integration with auto-stop controls and updated seed defaults across activities.
+  - Frontend periodic heartbeat (25s interval), `visibilitychange` listener, grace warning banner in `ActiveActivityScreen.tsx`, and auto-stop feedback toast in `AppShell.tsx`.
+  - Dedicated test suite `activities/tests_phase18.py` (17 comprehensive tests; 153 tests passing repository-wide).
 
 ## Next phase
-- Phase 18 — Auto-Stop & Session Integrity
+- Phase 19 — Gravity History
+
+## In progress
+- None
 
 ## In progress
 - None

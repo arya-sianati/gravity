@@ -6,7 +6,7 @@ import { MetricEntryForm } from '../components/MetricEntryForm';
 import type { MetricEntryFormHandle } from '../components/MetricEntryForm';
 
 export const ActiveActivityScreen: React.FC = () => {
-  const { activeSession, leaveActiveSession } = useActiveSession();
+  const { activeSession, leaveActiveSession, graceWarning } = useActiveSession();
   const [elapsed, setElapsed] = useState<string>('00:00:00');
   const [leaving, setLeaving] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -76,6 +76,17 @@ export const ActiveActivityScreen: React.FC = () => {
       <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-[0_0_10px_rgba(220,38,38,0.8)] animate-pulse">
         LIVE
       </div>
+
+      {/* Grace Warning Banner (Phase 18 Requirement 21) */}
+      {graceWarning && (
+        <div className="w-full max-w-sm mb-4 bg-amber-500/20 border border-amber-500/50 rounded-xl p-3 flex items-center space-x-2 text-amber-200 text-xs shadow-lg animate-pulse">
+          <span className="text-base">⚠️</span>
+          <span>
+            You moved away from this activity area. Return within{' '}
+            <strong className="font-bold text-amber-100">{graceWarning.remainingSeconds}s</strong> to keep the activity active.
+          </span>
+        </div>
+      )}
       
       <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center text-5xl shadow-xl mb-4 border border-gray-700" style={{ borderColor: activeSession.activity_type_details.color }}>
         {activeSession.activity_type_details.icon}

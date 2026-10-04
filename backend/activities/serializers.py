@@ -17,7 +17,8 @@ class ActivityTypeSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'slug', 'icon', 'color', 'description',
             'cluster_radius_m', 'qr_join_enabled', 'self_start_enabled',
-            'gps_tracking_enabled', 'metrics'
+            'gps_tracking_enabled', 'auto_stop_enabled', 'auto_stop_mode',
+            'auto_stop_radius_m', 'auto_stop_grace_seconds', 'metrics'
         ]
 
 from .models import ActivitySession, Participation

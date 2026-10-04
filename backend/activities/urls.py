@@ -25,6 +25,8 @@ from .views import (
     FriendChallengeAcceptAPIView,
     FriendChallengeDeclineAPIView,
     FriendChallengeCancelAPIView,
+    ActivityLocationHeartbeatAPIView,
+    ParticipationHeartbeatAPIView,
 )
 
 urlpatterns = [
@@ -43,6 +45,10 @@ urlpatterns = [
     path('challenges/<int:pk>/accept/', FriendChallengeAcceptAPIView.as_view(), name='challenge-accept'),
     path('challenges/<int:pk>/decline/', FriendChallengeDeclineAPIView.as_view(), name='challenge-decline'),
     path('challenges/<int:pk>/cancel/', FriendChallengeCancelAPIView.as_view(), name='challenge-cancel'),
+
+    # Phase 18: Auto-Stop & Location Heartbeat
+    path('me/activity-location/', ActivityLocationHeartbeatAPIView.as_view(), name='activity-location-heartbeat'),
+    path('participations/<int:pk>/heartbeat/', ParticipationHeartbeatAPIView.as_view(), name='participation-heartbeat'),
 
     path('', include(router.urls)),
 ]

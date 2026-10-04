@@ -25,6 +25,10 @@ export interface ActivityType {
   qr_join_enabled: boolean;
   self_start_enabled: boolean;
   gps_tracking_enabled: boolean;
+  auto_stop_enabled?: boolean;
+  auto_stop_mode?: 'disabled' | 'anchor_radius' | 'inactivity';
+  auto_stop_radius_m?: number;
+  auto_stop_grace_seconds?: number;
   metrics: ActivityMetric[];
 }
 

@@ -149,91 +149,15 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
         except Participation.DoesNotExist:
             return Response({"detail": "You are not active in this session."}, status=status.HTTP_400_BAD_REQUEST)
 
-        participation.status = Participation.Status.LEFT
-        participation.left_at = timezone.now()
-        
-        # Auto-calculate duration metrics
-        duration_seconds = (participation.left_at - participation.joined_at).total_seconds()
-        from .models import MetricValue, ActivityMetric
-        duration_metrics = session.activity_type.metrics.filter(data_type=ActivityMetric.DataType.DURATION)
-        for metric in duration_metrics:
-            # If the user hasn't explicitly entered a duration, or we prefer to override with exact:
-            # The spec says: "derive/finalize duration from: left_at - joined_at"
-            # We'll map duration to whatever the unit is, but let's assume 'minutes' or 'seconds'.
-            # Usually duration in DB can be mapped to seconds or minutes. We will store it as seconds,
-            # or if the unit says 'minutes', we store it in minutes.
-            val = duration_seconds
-            if metric.unit and 'min' in metric.unit.lower():
-                val = duration_seconds / 60.0
-            elif metric.unit and 'hour' in metric.unit.lower():
-                val = duration_seconds / 3600.0
-            
-            MetricValue.objects.update_or_create(
-                participation=participation,
-                metric=metric,
-                defaults={'value': val}
-            )
+        from .logic.autostop_service import finalize_participation
+        res = finalize_participation(
+            participation_id=participation.id,
+            left_status=Participation.Status.LEFT,
+            left_time=timezone.now(),
+            user=request.user
+        )
 
-        participation.save()
-
-        # Phase 11: Award XP
-        min_duration = getattr(settings, 'GRAVITY_MIN_XP_DURATION_SECONDS', 60)
-        from .logic.xp_service import award_xp
-        from .logic.streak_service import evaluate_streak
-        from .logic.achievement_service import evaluate_after_participation
-        
-        xp_awarded = None
-        level_up = False
-        streak_state = None
-        badges_earned = []
-        
-        if duration_seconds >= min_duration:
-            old_level = request.user.current_level
-            xpt = award_xp(
-                user=request.user,
-                amount=session.activity_type.default_xp,
-                reason='participation',
-                description=f"Completed {session.activity_type.name} participation",
-                participation=participation,
-                activity_type=session.activity_type
-            )
-            
-            # Phase 12: Evaluate streak
-            streak, incremented, _ = evaluate_streak(request.user, participation)
-            streak_state = {
-                "current": streak.current_count,
-                "longest": streak.longest_count
-            }
-            
-            # Phase 12: Evaluate badges
-            earned_list = evaluate_after_participation(request.user, participation, streak)
-            for b in earned_list:
-                badges_earned.append({
-                    "slug": b.slug,
-                    "name": b.name,
-                    "icon": b.icon
-                })
-
-            if xpt:
-                request.user.refresh_from_db()
-                xp_awarded = xpt.amount
-                if request.user.current_level > old_level:
-                    level_up = True
-
-        active_count = session.participations.filter(status=Participation.Status.ACTIVE).count()
-        if active_count == 0 and session.status == ActivitySession.Status.ACTIVE:
-            session.status = ActivitySession.Status.ENDED
-            session.ended_at = timezone.now()
-            session.save()
-
-        return Response({
-            "detail": "Successfully left the session.",
-            "xp_awarded": xp_awarded,
-            "level_up": level_up,
-            "current_level": request.user.current_level,
-            "streak": streak_state,
-            "badges_earned": badges_earned
-        }, status=status.HTTP_200_OK)
+        return Response(res, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def nearby(self, request):
@@ -846,3 +770,73 @@ class FriendChallengeCancelAPIView(APIView):
 
         serializer = FriendChallengeSerializer(challenge, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# =============================================================================
+# Phase 18: Auto-Stop & Location Heartbeat
+# =============================================================================
+
+from .logic.autostop_service import process_location_heartbeat
+
+class ActivityLocationHeartbeatAPIView(APIView):
+    """
+    Submits a location heartbeat for the authenticated user's current active participation.
+    Executes anchor-radius auto-stop evaluations if configured for the activity.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        lat = request.data.get('lat')
+        lng = request.data.get('lng')
+
+        if lat is None or lng is None:
+            return Response(
+                {"detail": "Both lat and lng coordinates are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            result = process_location_heartbeat(
+                user=request.user,
+                lat=lat,
+                lng=lng
+            )
+            return Response(result, status=status.HTTP_200_OK)
+        except DjangoValidationError as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoPermissionDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+
+class ParticipationHeartbeatAPIView(APIView):
+    """
+    Submits a location heartbeat for a specific participation ID.
+    Enforces that the participation belongs to the authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        lat = request.data.get('lat')
+        lng = request.data.get('lng')
+
+        if lat is None or lng is None:
+            return Response(
+                {"detail": "Both lat and lng coordinates are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            result = process_location_heartbeat(
+                user=request.user,
+                lat=lat,
+                lng=lng,
+                participation_id=pk
+            )
+            return Response(result, status=status.HTTP_200_OK)
+        except DjangoValidationError as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoPermissionDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+

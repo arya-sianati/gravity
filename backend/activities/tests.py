@@ -83,3 +83,45 @@ class ActivityTypeAPIViewTest(TestCase):
         url = reverse('activity-type-detail', kwargs={'slug': 'inactive'})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+from django.core.management import call_command
+from io import StringIO
+
+class SeedGravityCommandTest(TestCase):
+    def test_seed_idempotency_and_preservation(self):
+        # Run seed for the first time
+        out = StringIO()
+        call_command('seed_gravity', stdout=out)
+        self.assertIn("Successfully seeded activities!", out.getvalue())
+        
+        # Verify initial state
+        running = ActivityType.objects.get(slug="running")
+        self.assertEqual(running.name, "Running")
+        self.assertTrue(running.gps_tracking_enabled)
+        initial_count = ActivityType.objects.count()
+        
+        # Modify the activity (simulate admin edit)
+        running.name = "Jogging"
+        running.gps_tracking_enabled = False
+        running.save()
+        
+        # Modify a metric
+        distance = ActivityMetric.objects.get(activity_type=running, slug="distance")
+        distance.name = "Miles"
+        distance.save()
+
+        # Run seed a second time
+        out = StringIO()
+        call_command('seed_gravity', stdout=out)
+        self.assertIn("Preserved Activity", out.getvalue())
+        
+        # Verify no duplication occurred
+        self.assertEqual(ActivityType.objects.count(), initial_count)
+        
+        # Verify the admin modifications were preserved
+        running.refresh_from_db()
+        self.assertEqual(running.name, "Jogging")
+        self.assertFalse(running.gps_tracking_enabled)
+        
+        distance.refresh_from_db()
+        self.assertEqual(distance.name, "Miles")

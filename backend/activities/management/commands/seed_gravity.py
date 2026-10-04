@@ -72,8 +72,8 @@ class Command(BaseCommand):
             for act_data in activities_data:
                 metrics_data = act_data.pop('metrics', [])
                 
-                # Fetch or create ActivityType
-                activity, created = ActivityType.objects.update_or_create(
+                # Fetch or create ActivityType safely
+                activity, created = ActivityType.objects.get_or_create(
                     slug=act_data['slug'],
                     defaults=act_data
                 )
@@ -81,20 +81,18 @@ class Command(BaseCommand):
                 if created:
                     self.stdout.write(f"Created Activity: {activity.name}")
                 else:
-                    self.stdout.write(f"Updated Activity: {activity.name}")
+                    self.stdout.write(f"Preserved Activity: {activity.name}")
 
-                # Update or create metrics
-                existing_metric_slugs = []
+                # Safely fetch or create metrics
                 for m_data in metrics_data:
                     metric_slug = m_data['slug']
-                    existing_metric_slugs.append(metric_slug)
-                    metric, m_created = ActivityMetric.objects.update_or_create(
+                    metric, m_created = ActivityMetric.objects.get_or_create(
                         activity_type=activity,
                         slug=metric_slug,
                         defaults=m_data
                     )
                     
-                # Optionally, you can delete metrics that are no longer in the seed
-                ActivityMetric.objects.filter(activity_type=activity).exclude(slug__in=existing_metric_slugs).delete()
+                    if m_created:
+                        self.stdout.write(f"  Created Metric: {metric.name}")
 
         self.stdout.write(self.style.SUCCESS("Successfully seeded activities!"))

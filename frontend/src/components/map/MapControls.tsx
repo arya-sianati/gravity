@@ -11,7 +11,7 @@ export const MapControls: React.FC<MapControlsProps> = ({ onRecenter, locating, 
   const navigate = useNavigate();
 
   return (
-    <div className="absolute bottom-6 right-4 z-20 flex flex-col gap-2.5 items-end">
+    <div className="absolute bottom-6 right-4 z-20 flex flex-col gap-2.5 items-end pointer-events-auto">
       {/* Start Activity button */}
       <button
         onClick={() => navigate('/start')}

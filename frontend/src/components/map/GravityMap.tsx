@@ -327,15 +327,6 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         }, 500);
       });
 
-      map.on('click', (e) => {
-        // If clicking on a pulse-soon-fill polygon, don't open generic area history modal
-        const soonFeatures = mapRef.current?.queryRenderedFeatures(e.point, { layers: ['pulse-soon-fill'] });
-        if (soonFeatures && soonFeatures.length > 0) {
-          return;
-        }
-        setHistoryCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
-        setHistoryModalOpen(true);
-      });
     };
 
     // Request animation frame before initializing to allow flex/grid layout computation

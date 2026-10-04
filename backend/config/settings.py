@@ -183,3 +183,6 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Gravity XP Configuration
+GRAVITY_MIN_XP_DURATION_SECONDS = 60 # 1 minute minimum to qualify for participation XP

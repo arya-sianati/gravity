@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getXPHistory } from '../api/client';
+import type { XPTransaction } from '../api/client';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, updateProfile } = useAuth();
@@ -8,6 +10,14 @@ export const ProfileScreen: React.FC = () => {
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  
+  const [history, setHistory] = useState<XPTransaction[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      getXPHistory().then(setHistory).catch(() => {});
+    }
+  }, [user]);
 
   if (!user) {
     return null;
@@ -42,6 +52,12 @@ export const ProfileScreen: React.FC = () => {
         return mode;
     }
   };
+
+  // Safe destructure with defaults for new api fields
+  const levelProgress = user.level_progress || 0;
+  const levelStart = user.level_start_xp || 0;
+  const nextLevelXp = user.next_level_xp || 100;
+  const remaining = nextLevelXp - user.total_xp;
 
   return (
     <div className="flex-1 bg-black text-white p-5 overflow-y-auto">
@@ -115,21 +131,53 @@ export const ProfileScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        <div className="p-3.5 bg-gray-900/50 rounded-xl border border-gray-800/80">
-          <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Gravity Level</span>
-          <div className="text-2xl font-extrabold text-indigo-400 mt-0.5">Lv. {user.current_level}</div>
+      {/* Level Progress */}
+      <div className="mt-4 p-4 bg-gray-900/50 rounded-xl border border-gray-800/80">
+        <div className="flex justify-between items-end mb-2">
+          <div>
+            <span className="text-xs font-bold text-indigo-400">Level {user.current_level}</span>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">{user.total_xp} XP</span>
+          </div>
         </div>
-
-        <div className="p-3.5 bg-gray-900/50 rounded-xl border border-gray-800/80">
-          <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Total XP</span>
-          <div className="text-2xl font-extrabold text-purple-400 mt-0.5">{user.total_xp} <span className="text-xs font-normal text-gray-400">XP</span></div>
+        
+        <div className="h-2 w-full bg-gray-800 rounded-full overflow-hidden relative">
+          <div 
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+            style={{ width: `${levelProgress * 100}%` }}
+          />
+        </div>
+        
+        <div className="flex justify-between mt-1.5">
+          <span className="text-[10px] text-gray-500">{levelStart}</span>
+          <span className="text-[10px] text-purple-400 font-medium">{remaining} XP to go!</span>
+          <span className="text-[10px] text-gray-500">{nextLevelXp}</span>
         </div>
       </div>
 
+      {/* History */}
+      {history.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">Recent XP</h3>
+          <div className="space-y-2">
+            {history.slice(0, 5).map(tx => (
+              <div key={tx.id} className="p-3 bg-gray-900/40 rounded-lg border border-gray-800/50 flex justify-between items-center">
+                <div>
+                  <div className="text-sm font-medium text-gray-200">{tx.description || tx.reason}</div>
+                  <div className="text-[10px] text-gray-500">{new Date(tx.created_at).toLocaleDateString()} &middot; {tx.activity_type || 'System'}</div>
+                </div>
+                <div className="text-sm font-bold text-indigo-400">
+                  +{tx.amount}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Privacy Mode Info */}
-      <div className="mt-4 p-4 bg-gray-900/40 rounded-xl border border-gray-800/60">
+      <div className="mt-6 p-4 bg-gray-900/40 rounded-xl border border-gray-800/60">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-300">Location Privacy</span>
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-950/60 text-indigo-300 border border-indigo-800/50">
@@ -142,7 +190,7 @@ export const ProfileScreen: React.FC = () => {
       </div>
 
       {/* Membership Info */}
-      <div className="mt-6 text-center text-[10px] text-gray-600 font-mono">
+      <div className="mt-6 text-center text-[10px] text-gray-600 font-mono mb-8">
         Member since {new Date(user.created_at).toLocaleDateString()}
       </div>
     </div>

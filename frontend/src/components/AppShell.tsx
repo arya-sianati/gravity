@@ -1,12 +1,29 @@
 import { Outlet, NavLink } from 'react-router-dom';
+import { useActiveSession } from '../context/ActiveSessionContext';
 
 export const AppShell: React.FC = () => {
+  const { xpFeedback } = useActiveSession();
+
   return (
     <div className="flex flex-col h-full w-full max-w-md mx-auto bg-black relative shadow-lg overflow-hidden">
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         <Outlet />
       </main>
+
+      {/* XP Overlay Toast */}
+      {xpFeedback && (
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-50 animate-bounce flex flex-col items-center pointer-events-none">
+          <div className="bg-indigo-600/90 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold text-lg shadow-[0_0_20px_rgba(79,70,229,0.5)] border border-indigo-400">
+            +{xpFeedback.amount} XP
+          </div>
+          {xpFeedback.levelUp && (
+            <div className="mt-2 bg-yellow-500 text-black px-4 py-1 rounded-full font-black text-sm uppercase tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.6)]">
+              Level Up! Lv {xpFeedback.newLevel}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <nav className="h-16 bg-gray-950 border-t border-gray-800 flex justify-around items-center px-2 z-40 pb-safe">

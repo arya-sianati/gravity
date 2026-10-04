@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 11 — Gravity XP & Levels
+Phase 12 — Leaderboard Filtering & Scopes
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -17,12 +17,14 @@ Phase 11 — Gravity XP & Levels
 - Phase 08 - QR Joining
 - Phase 09 - Realtime WebSockets
 - Phase 10 - Metrics & Activity Leaderboards
-  - Built `MetricValue` model tracking integer/duration/boolean data uniquely per Participation and Metric.
-  - Implemented dynamic UI form interpreting any activity's metric data types.
-  - Form properly blocks finishing if required metrics are empty.
-  - Auto-calculates exact duration metric upon explicit 'leave' action based on `joined_at`.
-  - Added Leaderboard API serving ranks, values, handling stable ties, and period filtering (Today, Week, All-time).
-  - Designed `LeaderboardScreen.tsx` dynamically supporting any custom metric unit.
+- Phase 11 - Gravity XP & Levels
+  - Built `XPTransaction` ledger model tracking history, reason, and context.
+  - Implemented `xp_service.py` to deterministically allocate XP and calculate derived `level_for_xp` mathematically via bounded curves.
+  - Integrated Participation XP completion hook into `leave` event with server-based minimum duration thresholds (`GRAVITY_MIN_XP_DURATION_SECONDS`).
+  - Added idempotency protecting against duplicate participation XP using DB unique constraints.
+  - Completed endpoints for `GET /api/me/xp-history/` and payload expansions for user profile logic.
+  - Wired frontend `ProfileScreen.tsx` with dynamic level progression bar overlay.
+  - Implemented realtime `+XP / Level Up!` toast overlay gracefully rendered directly across the `AppShell`.
 
 ## In progress
 - None
@@ -51,4 +53,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 11: Gravity XP & Levels.
+Begin Phase 12: Leaderboard Filtering & Scopes.

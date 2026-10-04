@@ -217,3 +217,35 @@ class MetricValue(models.Model):
         elif self.metric.data_type == ActivityMetric.DataType.BOOLEAN:
             if self.value not in (0.0, 1.0):
                 raise ValidationError({'value': 'Value must be boolean (0.0 or 1.0).'})
+
+class XPTransaction(models.Model):
+    class Reason(models.TextChoices):
+        PARTICIPATION = 'participation', 'Participation'
+        STREAK = 'streak', 'Streak'
+        BADGE = 'badge', 'Badge'
+        EVENT = 'event', 'Event'
+        CHALLENGE = 'challenge', 'Challenge'
+        ADMIN = 'admin', 'Admin'
+        ADJUSTMENT = 'adjustment', 'Adjustment'
+
+    user = models.ForeignKey(User, related_name='xp_transactions', on_delete=models.CASCADE)
+    amount = models.IntegerField()
+    reason = models.CharField(max_length=20, choices=Reason.choices)
+    description = models.CharField(max_length=255, blank=True)
+    
+    activity_type = models.ForeignKey(ActivityType, null=True, blank=True, on_delete=models.SET_NULL)
+    participation = models.ForeignKey('Participation', null=True, blank=True, on_delete=models.SET_NULL)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['participation', 'reason'],
+                condition=models.Q(participation__isnull=False),
+                name='unique_xp_per_participation_reason'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} {self.amount:+d} XP ({self.reason})"

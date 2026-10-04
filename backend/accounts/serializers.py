@@ -3,6 +3,10 @@ from django.contrib.auth import authenticate
 from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
+    level_start_xp = serializers.SerializerMethodField()
+    next_level_xp = serializers.SerializerMethodField()
+    level_progress = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -12,6 +16,9 @@ class UserSerializer(serializers.ModelSerializer):
             'display_name',
             'total_xp',
             'current_level',
+            'level_start_xp',
+            'next_level_xp',
+            'level_progress',
             'location_privacy_mode',
             'created_at',
             'updated_at',
@@ -20,9 +27,28 @@ class UserSerializer(serializers.ModelSerializer):
             'id',
             'total_xp',
             'current_level',
+            'level_start_xp',
+            'next_level_xp',
+            'level_progress',
             'created_at',
             'updated_at',
         ]
+
+    def get_level_start_xp(self, obj):
+        from activities.logic.xp_service import xp_for_level
+        return xp_for_level(obj.current_level)
+        
+    def get_next_level_xp(self, obj):
+        from activities.logic.xp_service import xp_for_next_level
+        return xp_for_next_level(obj.current_level)
+        
+    def get_level_progress(self, obj):
+        from activities.logic.xp_service import xp_for_level, xp_for_next_level
+        start = xp_for_level(obj.current_level)
+        end = xp_for_next_level(obj.current_level)
+        if end == start:
+            return 1.0
+        return min(1.0, max(0.0, (obj.total_xp - start) / float(end - start)))
 
 
 class RegisterSerializer(serializers.Serializer):

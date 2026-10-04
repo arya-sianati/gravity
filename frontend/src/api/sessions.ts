@@ -49,8 +49,16 @@ export const joinSession = async (sessionId: string): Promise<ActivitySession> =
   return response.data;
 };
 
-export const leaveSession = async (sessionId: string): Promise<void> => {
-  await apiClient.post(`/api/sessions/${sessionId}/leave/`);
+export interface LeaveSessionResponse {
+  detail: string;
+  xp_awarded: number | null;
+  level_up: boolean;
+  current_level: number;
+}
+
+export const leaveSession = async (sessionId: string): Promise<LeaveSessionResponse> => {
+  const res = await apiClient.post<LeaveSessionResponse>(`/api/sessions/${sessionId}/leave/`);
+  return res.data;
 };
 
 export const getNearbySessions = async (activitySlug: string, lat: number, lng: number): Promise<NearbySession[]> => {

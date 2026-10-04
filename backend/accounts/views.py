@@ -78,3 +78,22 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+
+class XPHistoryAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from activities.models import XPTransaction
+        # Simple pagination for history
+        qs = XPTransaction.objects.filter(user=request.user).order_by('-created_at')[:50]
+        data = []
+        for xpt in qs:
+            data.append({
+                "id": xpt.id,
+                "amount": xpt.amount,
+                "reason": xpt.reason,
+                "description": xpt.description,
+                "activity_type": xpt.activity_type.name if xpt.activity_type else None,
+                "created_at": xpt.created_at.isoformat()
+            })
+        return Response(data, status=status.HTTP_200_OK)

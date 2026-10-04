@@ -165,13 +165,39 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
 
         participation.save()
 
+        # Phase 11: Award XP
+        min_duration = getattr(settings, 'GRAVITY_MIN_XP_DURATION_SECONDS', 60)
+        from .logic.xp_service import award_xp
+        xp_awarded = None
+        level_up = False
+        if duration_seconds >= min_duration:
+            old_level = request.user.current_level
+            xpt = award_xp(
+                user=request.user,
+                amount=session.activity_type.default_xp,
+                reason='participation',
+                description=f"Completed {session.activity_type.name} participation",
+                participation=participation,
+                activity_type=session.activity_type
+            )
+            if xpt:
+                request.user.refresh_from_db()
+                xp_awarded = xpt.amount
+                if request.user.current_level > old_level:
+                    level_up = True
+
         active_count = session.participations.filter(status=Participation.Status.ACTIVE).count()
         if active_count == 0 and session.status == ActivitySession.Status.ACTIVE:
             session.status = ActivitySession.Status.ENDED
             session.ended_at = timezone.now()
             session.save()
 
-        return Response({"detail": "Successfully left the session."}, status=status.HTTP_200_OK)
+        return Response({
+            "detail": "Successfully left the session.",
+            "xp_awarded": xp_awarded,
+            "level_up": level_up,
+            "current_level": request.user.current_level
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def nearby(self, request):

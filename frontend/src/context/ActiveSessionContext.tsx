@@ -4,18 +4,29 @@ import type { ActivitySession } from '../api/sessions';
 import { useAuth } from './AuthContext';
 import { useGravitySocket } from '../lib/realtime/useGravitySocket';
 
+interface XPFeedback {
+  amount: number;
+  levelUp: boolean;
+  newLevel: number;
+}
+
 interface ActiveSessionContextType {
   activeSession: ActivitySession | null;
   setActiveSession: React.Dispatch<React.SetStateAction<ActivitySession | null>>;
   refreshActiveSession: () => Promise<void>;
-  leaveActiveSession: () => Promise<void>;
+  leaveActiveSession: () => Promise<any>;
+  xpFeedback: XPFeedback | null;
+  clearXPFeedback: () => void;
 }
 
 const ActiveSessionContext = createContext<ActiveSessionContextType | undefined>(undefined);
 
 export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [activeSession, setActiveSession] = useState<ActivitySession | null>(null);
+  const [xpFeedback, setXpFeedback] = useState<XPFeedback | null>(null);
+  
+  const clearXPFeedback = () => setXpFeedback(null);
   
   const wsUrl = activeSession ? `/ws/gravity/session/${activeSession.id}/` : null;
   const { lastMessage } = useGravitySocket(wsUrl);
@@ -35,10 +46,20 @@ export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const leaveActiveSession = async () => {
-    if (!activeSession) return;
+    if (!activeSession) return null;
     try {
-      await leaveSession(activeSession.id);
+      const res = await leaveSession(activeSession.id);
       setActiveSession(null);
+      if (res?.xp_awarded) {
+        setXpFeedback({
+          amount: res.xp_awarded,
+          levelUp: !!res.level_up,
+          newLevel: res.current_level
+        });
+        refreshUser();
+        setTimeout(() => setXpFeedback(null), 5000);
+      }
+      return res;
     } catch (err) {
       console.error('Failed to leave session', err);
       throw err;
@@ -69,7 +90,7 @@ export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [lastMessage]);
 
   return (
-    <ActiveSessionContext.Provider value={{ activeSession, setActiveSession, refreshActiveSession, leaveActiveSession }}>
+    <ActiveSessionContext.Provider value={{ activeSession, setActiveSession, refreshActiveSession, leaveActiveSession, xpFeedback, clearXPFeedback }}>
       {children}
     </ActiveSessionContext.Provider>
   );

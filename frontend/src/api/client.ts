@@ -7,6 +7,9 @@ export interface User {
   display_name: string;
   total_xp: number;
   current_level: number;
+  level_start_xp: number;
+  next_level_xp: number;
+  level_progress: number;
   location_privacy_mode: 'hidden' | 'blurred' | 'friends' | 'exact';
   created_at: string;
   updated_at: string;
@@ -100,5 +103,19 @@ export const getMe = async (): Promise<User> => {
 
 export const updateMe = async (data: UpdateProfilePayload): Promise<User> => {
   const response = await apiClient.patch<User>('/me/', data);
+  return response.data;
+};
+
+export interface XPTransaction {
+  id: number;
+  amount: number;
+  reason: string;
+  description: string;
+  activity_type: string | null;
+  created_at: string;
+}
+
+export const getXPHistory = async (): Promise<XPTransaction[]> => {
+  const response = await apiClient.get<XPTransaction[]>('/me/xp-history/');
   return response.data;
 };

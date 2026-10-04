@@ -3,7 +3,7 @@
 Last updated: 2026-10-03
 
 ## Current phase
-Phase 05 — Activity Session Management
+Phase 06 — Activity Sessions
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -11,13 +11,14 @@ Phase 05 — Activity Session Management
 - Phase 02 - Frontend Foundation
 - Phase 03 - Authentication & Profile
 - Phase 04 - Configurable Activity Engine
-  - Created `ActivityType` and `ActivityMetric` models with strict constraints (slug uniqueness, only one primary metric, no negative configuration values).
-  - Set up Django Admin with `ActivityMetricInline` for easy configuration.
-  - Implemented `/api/activity-types/` (list active) and detail endpoint.
-  - Wrote idempotent `seed_gravity` command and seeded Basketball, Running, Gaming, Studying, Workout, Soccer, Other.
-  - Frontend `StartActivityScreen` now dynamically fetches and renders activities directly from the API.
-  - Executed successful Pickleball acceptance test showing activity adds/removals work without code changes.
-  - 9 backend tests written and passing; frontend TS checks and production build succeeded.
+- Phase 05 - Map Foundation
+  - Clean `seed_gravity` to preserve admin modifications.
+  - Installed `maplibre-gl` and built `GravityMap` and `MapControls` components.
+  - Implemented safe Geolocation API with permissions handling and recenter UI.
+  - Set up view bounding box tracking via `moveend` event for Phase 07 preparation.
+  - Prepared empty heatmap sources and layers using dynamic Activity Types.
+  - No WebSockets, Live Heat, or Session logic implemented (deferred to correct phases).
+  - Production build and backend test checks pass.
 
 ## In progress
 - None
@@ -44,4 +45,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 05: Activity Session Management.
+Begin Phase 06: Activity Sessions.

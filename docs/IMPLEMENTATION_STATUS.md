@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 10 — Metrics & Leaderboards
+Phase 11 — Gravity XP & Levels
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -16,12 +16,13 @@ Phase 10 — Metrics & Leaderboards
 - Phase 07 - Live Map Heat
 - Phase 08 - QR Joining
 - Phase 09 - Realtime WebSockets
-  - Configured Django Channels with Redis (`channels_redis`).
-  - Added MapConsumer allowing anonymous connects for map-refresh broadcast.
-  - Added SessionConsumer requiring authenticated scopes for specific session groups.
-  - Tied `post_save` / `post_delete` signals on `ActivitySession` and `Participation` to `transaction.on_commit()` for 100% reliable broadcast.
-  - Upgraded frontend to connect React `useGravitySocket` hook with visibility backoff and bounding polling fallback.
-  - Preserved Phase 07 serialization privacy.
+- Phase 10 - Metrics & Activity Leaderboards
+  - Built `MetricValue` model tracking integer/duration/boolean data uniquely per Participation and Metric.
+  - Implemented dynamic UI form interpreting any activity's metric data types.
+  - Form properly blocks finishing if required metrics are empty.
+  - Auto-calculates exact duration metric upon explicit 'leave' action based on `joined_at`.
+  - Added Leaderboard API serving ranks, values, handling stable ties, and period filtering (Today, Week, All-time).
+  - Designed `LeaderboardScreen.tsx` dynamically supporting any custom metric unit.
 
 ## In progress
 - None
@@ -31,6 +32,7 @@ Phase 10 — Metrics & Leaderboards
 
 ## Deferred
 - Full privacy settings UI remains deferred to P1 / Phase 16 as approved.
+- `season` period filtering on Leaderboards is intentionally returning 501 until Phase 14 implements Season logic.
 
 ## Setup / migration commands
 ```bash
@@ -49,4 +51,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 10: Metrics & Leaderboards.
+Begin Phase 11: Gravity XP & Levels.

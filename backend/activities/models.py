@@ -185,3 +185,35 @@ class Participation(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.session.activity_type.name} ({self.status})"
+
+class MetricValue(models.Model):
+    participation = models.ForeignKey(Participation, related_name='metric_values', on_delete=models.CASCADE)
+    metric = models.ForeignKey(ActivityMetric, related_name='values', on_delete=models.CASCADE)
+    value = models.FloatField()
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('participation', 'metric')
+        
+    def __str__(self):
+        return f"{self.participation.user.username} - {self.metric.name}: {self.value}"
+        
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.metric.activity_type_id != self.participation.session.activity_type_id:
+            raise ValidationError({'metric': 'Metric does not belong to the activity type of this participation.'})
+            
+        if self.metric.min_value is not None and self.value < self.metric.min_value:
+            raise ValidationError({'value': f"Value cannot be less than {self.metric.min_value}"})
+            
+        if self.metric.max_value is not None and self.value > self.metric.max_value:
+            raise ValidationError({'value': f"Value cannot be more than {self.metric.max_value}"})
+            
+        if self.metric.data_type == ActivityMetric.DataType.INTEGER:
+            if not float(self.value).is_integer():
+                raise ValidationError({'value': 'Value must be an integer.'})
+        elif self.metric.data_type == ActivityMetric.DataType.BOOLEAN:
+            if self.value not in (0.0, 1.0):
+                raise ValidationError({'value': 'Value must be boolean (0.0 or 1.0).'})

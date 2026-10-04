@@ -33,26 +33,43 @@ class ParticipantUserSerializer(serializers.ModelSerializer):
 
 class ParticipationSerializer(serializers.ModelSerializer):
     user = ParticipantUserSerializer(read_only=True)
+    metrics = serializers.SerializerMethodField()
 
     class Meta:
         model = Participation
-        fields = ['id', 'user', 'status', 'joined_at', 'join_method']
+        fields = ['id', 'user', 'status', 'joined_at', 'join_method', 'metrics']
+
+    def get_metrics(self, obj):
+        # We can optimize this later with prefetch_related, but for now this works.
+        from .models import MetricValue
+        return {mv.metric.slug: mv.value for mv in obj.metric_values.all()}
 
 class ActivitySessionSerializer(serializers.ModelSerializer):
     activity_type_details = ActivityTypeSerializer(source='activity_type', read_only=True)
     created_by = ParticipantUserSerializer(read_only=True)
     active_participants_count = serializers.SerializerMethodField()
+    my_participation = serializers.SerializerMethodField()
 
     class Meta:
         model = ActivitySession
         fields = [
             'id', 'activity_type', 'activity_type_details', 'created_by',
             'status', 'label', 'started_at', 'ended_at',
-            'active_participants_count'
+            'active_participants_count', 'my_participation'
         ]
 
     def get_active_participants_count(self, obj):
         return obj.participations.filter(status=Participation.Status.ACTIVE).count()
+        
+    def get_my_participation(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        from .models import Participation
+        part = obj.participations.filter(user=request.user, status=Participation.Status.ACTIVE).first()
+        if part:
+            return ParticipationSerializer(part).data
+        return None
 
 class ActivitySessionCreateSerializer(serializers.ModelSerializer):
     lat = serializers.FloatField(write_only=True)
@@ -79,3 +96,10 @@ class NearbySessionSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'distance'):
             return getattr(obj, 'distance').m
         return None
+
+class MetricValueSerializer(serializers.ModelSerializer):
+    metric_slug = serializers.CharField(source='metric.slug', read_only=True)
+    class Meta:
+        from .models import MetricValue
+        model = MetricValue
+        fields = ['metric_slug', 'value', 'updated_at']

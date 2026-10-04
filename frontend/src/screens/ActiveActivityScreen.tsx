@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { getJoinCode } from '../api/sessions';
+import { MetricEntryForm } from '../components/MetricEntryForm';
+import type { MetricEntryFormHandle } from '../components/MetricEntryForm';
 
 export const ActiveActivityScreen: React.FC = () => {
   const { activeSession, leaveActiveSession } = useActiveSession();
@@ -10,6 +12,7 @@ export const ActiveActivityScreen: React.FC = () => {
   const [showQR, setShowQR] = useState(false);
   const [joinUrl, setJoinUrl] = useState<string | null>(null);
   const [loadingQR, setLoadingQR] = useState(false);
+  const formRef = useRef<MetricEntryFormHandle>(null);
 
   useEffect(() => {
     if (!activeSession) return;
@@ -54,6 +57,11 @@ export const ActiveActivityScreen: React.FC = () => {
   }
 
   const handleLeave = async () => {
+    if (formRef.current) {
+      const ok = await formRef.current.submit();
+      if (!ok) return;
+    }
+    
     setLeaving(true);
     try {
       await leaveActiveSession();
@@ -83,9 +91,18 @@ export const ActiveActivityScreen: React.FC = () => {
         </span>
       )}
 
-      <div className="text-6xl font-mono text-white mb-8 tracking-tighter">
+      <div className="text-6xl font-mono text-white mb-6 tracking-tighter">
         {elapsed}
       </div>
+
+      {activeSession.my_participation && (
+        <MetricEntryForm 
+          ref={formRef}
+          participationId={activeSession.my_participation.id}
+          metricsDef={activeSession.activity_type_details.metrics}
+          initialMetrics={activeSession.my_participation.metrics}
+        />
+      )}
 
       <div className="bg-gray-800 rounded-xl p-4 w-full max-w-sm mb-6 border border-gray-700 flex flex-col gap-2">
         <div className="flex justify-between items-center text-sm">

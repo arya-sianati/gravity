@@ -6,7 +6,9 @@ from .views import (
     ActivitySessionViewSet,
     ActiveParticipationAPIView,
     LiveMapAPIView,
-    JoinTokenAPIView
+    JoinTokenAPIView,
+    ParticipationMetricsAPIView,
+    LeaderboardAPIView
 )
 
 router = DefaultRouter()
@@ -17,6 +19,8 @@ urlpatterns = [
     path('join/<uuid:token>/', JoinTokenAPIView.as_view(), name='join-token'),
     path('activity-types/', ActivityTypeListAPIView.as_view(), name='activity-type-list'),
     path('activity-types/<slug:slug>/', ActivityTypeDetailAPIView.as_view(), name='activity-type-detail'),
+    path('leaderboards/<slug:activity_slug>/', LeaderboardAPIView.as_view(), name='leaderboard'),
     path('me/active-participation/', ActiveParticipationAPIView.as_view(), name='active-participation'),
+    path('participations/<int:pk>/metrics/', ParticipationMetricsAPIView.as_view(), name='participation-metrics'),
     path('', include(router.urls)),
 ]

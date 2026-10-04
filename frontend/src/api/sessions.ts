@@ -7,6 +7,15 @@ export interface Participant {
   display_name: string;
 }
 
+export interface ParticipationData {
+  id: number;
+  user: Participant;
+  status: string;
+  joined_at: string;
+  join_method: string;
+  metrics: Record<string, number>;
+}
+
 export interface ActivitySession {
   id: string;
   activity_type: number;
@@ -17,6 +26,7 @@ export interface ActivitySession {
   started_at: string;
   ended_at: string | null;
   active_participants_count: number;
+  my_participation: ParticipationData | null;
 }
 
 export interface NearbySession {
@@ -70,3 +80,8 @@ export const joinByToken = async (token: string): Promise<any> => {
   return response.data;
 };
 
+
+export const updateMetrics = async (participationId: number, metrics: Record<string, number | null>): Promise<{metrics: Record<string, number>}> => {
+  const response = await apiClient.patch(`/api/participations/${participationId}/metrics/`, metrics);
+  return response.data;
+};

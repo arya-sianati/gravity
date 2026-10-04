@@ -11,6 +11,7 @@ import { FriendsScreen } from './screens/FriendsScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { StartActivityScreen } from './screens/StartActivityScreen';
 import { QRJoinScreen } from './screens/QRJoinScreen';
+import { LeaderboardScreen } from './screens/LeaderboardScreen';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             >
               <Route index element={<MapScreen />} />
               <Route path="pulse" element={<PulseScreen />} />
+              <Route path="leaderboards" element={<LeaderboardScreen />} />
               <Route path="friends" element={<FriendsScreen />} />
               <Route path="profile" element={<ProfileScreen />} />
               <Route path="start" element={<StartActivityScreen />} />

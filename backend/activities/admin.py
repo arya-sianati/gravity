@@ -59,3 +59,12 @@ class ParticipationAdmin(admin.ModelAdmin):
     list_filter = ('status', 'join_method')
     search_fields = ('user__username', 'session__id')
     readonly_fields = ('joined_at', 'left_at', 'created_at', 'updated_at')
+
+from .models import MetricValue
+
+@admin.register(MetricValue)
+class MetricValueAdmin(admin.ModelAdmin):
+    list_display = ('id', 'participation', 'metric', 'value', 'updated_at')
+    list_filter = ('metric__activity_type', 'metric')
+    search_fields = ('participation__user__username', 'metric__name')
+    readonly_fields = ('created_at', 'updated_at')

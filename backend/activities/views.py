@@ -140,6 +140,29 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
 
         participation.status = Participation.Status.LEFT
         participation.left_at = timezone.now()
+        
+        # Auto-calculate duration metrics
+        duration_seconds = (participation.left_at - participation.joined_at).total_seconds()
+        from .models import MetricValue, ActivityMetric
+        duration_metrics = session.activity_type.metrics.filter(data_type=ActivityMetric.DataType.DURATION)
+        for metric in duration_metrics:
+            # If the user hasn't explicitly entered a duration, or we prefer to override with exact:
+            # The spec says: "derive/finalize duration from: left_at - joined_at"
+            # We'll map duration to whatever the unit is, but let's assume 'minutes' or 'seconds'.
+            # Usually duration in DB can be mapped to seconds or minutes. We will store it as seconds,
+            # or if the unit says 'minutes', we store it in minutes.
+            val = duration_seconds
+            if metric.unit and 'min' in metric.unit.lower():
+                val = duration_seconds / 60.0
+            elif metric.unit and 'hour' in metric.unit.lower():
+                val = duration_seconds / 3600.0
+            
+            MetricValue.objects.update_or_create(
+                participation=participation,
+                metric=metric,
+                defaults={'value': val}
+            )
+
         participation.save()
 
         active_count = session.participations.filter(status=Participation.Status.ACTIVE).count()
@@ -312,3 +335,161 @@ class JoinTokenAPIView(APIView):
 
         return Response(ActivitySessionSerializer(session).data, status=status.HTTP_200_OK)
 
+
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError
+
+class ParticipationMetricsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk, *args, **kwargs):
+        participation = get_object_or_404(Participation, pk=pk)
+        if participation.user != request.user:
+            return Response({'detail': 'Not authorized to modify these metrics.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        activity_type = participation.session.activity_type
+        available_metrics = {m.slug: m for m in activity_type.metrics.all()}
+        
+        from .models import MetricValue
+        
+        updated_metrics = {}
+        
+        with transaction.atomic():
+            for slug, value in request.data.items():
+                if slug not in available_metrics:
+                    raise ValidationError({slug: f"Metric '{slug}' is not valid for activity '{activity_type.slug}'"})
+                
+                metric = available_metrics[slug]
+                if value is None:
+                    continue # Or allow delete? Spec says submit metric, doesn't mention delete.
+                    
+                # Validate type
+                try:
+                    val_float = float(value)
+                except (ValueError, TypeError):
+                    raise ValidationError({slug: "Value must be numeric."})
+                
+                mv, created = MetricValue.objects.update_or_create(
+                    participation=participation,
+                    metric=metric,
+                    defaults={'value': val_float}
+                )
+                
+                try:
+                    mv.clean()
+                except DjangoValidationError as e:
+                    raise ValidationError({slug: e.message_dict.get('value', str(e))})
+                
+                updated_metrics[slug] = mv.value
+                
+        return Response({'metrics': updated_metrics})
+
+from django.db.models import Sum, Max, Avg, F
+from django.db.models.functions import Coalesce
+from django.utils import timezone
+from datetime import timedelta
+
+class LeaderboardAPIView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request, activity_slug, *args, **kwargs):
+        activity_type = get_object_or_404(ActivityType, slug=activity_slug, is_active=True)
+        
+        # Get primary metric
+        primary_metric = activity_type.metrics.filter(is_primary=True, leaderboard_enabled=True).first()
+        if not primary_metric:
+            # Fallback to any leaderboard enabled metric
+            primary_metric = activity_type.metrics.filter(leaderboard_enabled=True).first()
+            
+        if not primary_metric:
+            return Response({
+                "activity": {"slug": activity_type.slug, "name": activity_type.name, "icon": activity_type.icon},
+                "period": request.GET.get('period', 'all'),
+                "rows": [],
+                "me": None,
+                "detail": "No leaderboard metric available."
+            })
+            
+        period = request.GET.get('period', 'all')
+        now = timezone.now()
+        
+        # We only aggregate COMPLETED participations (or LEFT)
+        from .models import Participation
+        qs = Participation.objects.filter(
+            session__activity_type=activity_type,
+            status__in=[Participation.Status.COMPLETED, Participation.Status.LEFT, Participation.Status.AUTO_STOPPED],
+            metric_values__metric=primary_metric
+        )
+        
+        if period == 'today':
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            qs = qs.filter(joined_at__gte=start_of_day)
+        elif period == 'week':
+            # Monday 00:00
+            start_of_week = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+            qs = qs.filter(joined_at__gte=start_of_week)
+        elif period == 'season':
+            return Response({"detail": "Season unavailable"}, status=status.HTTP_501_NOT_IMPLEMENTED)
+            
+        # Aggregation
+        from .models import ActivityMetric
+        agg_func = Sum
+        if primary_metric.aggregation == ActivityMetric.AggregationMode.MAX:
+            agg_func = Max
+        elif primary_metric.aggregation == ActivityMetric.AggregationMode.AVERAGE:
+            agg_func = Avg
+            
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        # Group by user
+        aggregated = qs.values('user__id', 'user__username').annotate(
+            agg_value=agg_func('metric_values__value')
+        ).order_by('-agg_value')
+        
+        # Apply limit
+        limit = int(request.GET.get('limit', 100))
+        
+        rows = []
+        me = None
+        
+        # Sort and rank (handle ties)
+        current_rank = 1
+        previous_value = None
+        
+        for i, row in enumerate(aggregated):
+            val = row['agg_value']
+            if previous_value is not None and val < previous_value:
+                current_rank = i + 1
+                
+            entry = {
+                "rank": current_rank,
+                "user": {
+                    "id": row['user__id'],
+                    "display_name": row['user__username']
+                },
+                "value": val
+            }
+            if len(rows) < limit:
+                rows.append(entry)
+                
+            if request.user.is_authenticated and row['user__id'] == request.user.id:
+                me = entry
+                
+            previous_value = val
+            
+        return Response({
+            "activity": {
+                "slug": activity_type.slug,
+                "name": activity_type.name,
+                "icon": activity_type.icon
+            },
+            "metric": {
+                "slug": primary_metric.slug,
+                "name": primary_metric.name,
+                "unit": primary_metric.unit
+            },
+            "period": period,
+            "rows": rows,
+            "me": me
+        })

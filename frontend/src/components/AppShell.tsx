@@ -11,7 +11,7 @@ export const AppShell: React.FC = () => {
       {/* Bottom Navigation */}
       <nav className="h-16 bg-gray-950 border-t border-gray-800 flex justify-around items-center px-2 z-40 pb-safe">
         <NavItem to="/" label="Map" icon="M" />
-        <NavItem to="/pulse" label="Pulse" icon="P" />
+        <NavItem to="/leaderboards" label="Rank" icon="L" />
         <NavItem to="/start" label="Start" icon="+" isPrimary />
         <NavItem to="/friends" label="Friends" icon="F" />
         <NavItem to="/profile" label="Profile" icon="U" />

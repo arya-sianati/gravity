@@ -97,11 +97,21 @@ Phase 22 — Production Deployment (Complete)
 ## Next phase
 - Phase 23 — Demo Hardening & Final Acceptance
 
+- Phase 23 - Production Hotfix: Real-World Basemap & PWA Standalone Layout
+  - Root-cause resolution of white-map issue: transitioned from washed-out monochrome Carto Positron (`#fafaf8`) to vibrant, colorful Carto Voyager vector basemap with green quads/parks, blue water bodies, yellow/white roads with borders, building footprints, and legible labels (Snap Map / Google Maps style).
+  - High-resiliency raster fallback: added OpenStreetMap raster tile automatic fallback in `GravityMap.tsx` if vector basemap or WebGL style fails.
+  - Sizing & resize lifecycle: restructured map container to `absolute inset-0 w-full h-full` and attached `ResizeObserver` on `mapContainerRef` to trigger `map.resize()` on mount, DOM paint, rotation, and window resize.
+  - Fixed PWA standalone chin gap: eliminated WebKit `-webkit-fill-available` height computation bug on `#root` / `body` by switching viewport architecture to locked `position: fixed; inset: 0` on `html, body` and `absolute inset-0` on `#root`.
+  - Pinned bottom navigation: anchored navigation firmly to the physical bottom of the device with `shrink-0 w-full` and `paddingBottom: max(env(safe-area-inset-bottom, 0px), 0.5rem)`.
+  - Safe-area notch protection: added top safe-area handling (`calc(env(safe-area-inset-top, 0px) + ...)`) across `GravityMap` overlays, `PulseScreen`, `FriendsScreen`, `LeaderboardScreen`, `ProfileScreen`, and `StartActivityScreen` to prevent collision with iPhone notch / Dynamic Island.
+  - Seamless PWA updates: added `clientsClaim: true, skipWaiting: true` to VitePWA workbox configuration ensuring service workers immediately update without hanging tabs.
+  - Resilient location fallback: added "Use Campus Location" fallback button to `StartActivityScreen.tsx` (matching `PulseScreen.tsx`) to guarantee flawless demo execution even if GPS is denied or simulated.
+
 ## In progress
 - None
 
 ## Known issues
-- Physical second-phone camera QR scanning requires physical mobile device verification.
+- Physical second-phone camera QR scanning and physical iPhone installed PWA verification require physical mobile device verification.
 
 ## Deferred
 - None

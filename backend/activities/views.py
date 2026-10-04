@@ -180,3 +180,50 @@ class ActiveParticipationAPIView(generics.RetrieveAPIView):
             return Response(None, status=status.HTTP_200_OK)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+from django.contrib.gis.geos import Polygon
+from rest_framework.views import APIView
+from django.db.models import Count, Q
+from .services import get_privacy_safe_feature
+
+class LiveMapAPIView(APIView):
+    permission_classes = []
+    
+    def get(self, request):
+        bbox_str = request.query_params.get('bbox')
+        if not bbox_str:
+            return Response({"detail": "Missing bbox parameter."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            west, south, east, north = map(float, bbox_str.split(','))
+        except ValueError:
+            return Response({"detail": "Malformed bbox parameter."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if west >= east or south >= north:
+            return Response({"detail": "Invalid bbox coordinate ordering."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        bbox_polygon = Polygon.from_bbox((west, south, east, north))
+        
+        # Query active sessions within bbox
+        sessions = ActivitySession.objects.filter(
+            status=ActivitySession.Status.ACTIVE,
+            location__within=bbox_polygon
+        ).select_related('created_by', 'activity_type').annotate(
+            active_count=Count('participations', filter=Q(participations__status=Participation.Status.ACTIVE))
+        )
+        
+        features = []
+        user = request.user if request.user.is_authenticated else None
+        
+        for session in sessions:
+            if session.active_count == 0:
+                continue # Safety skip
+            feat = get_privacy_safe_feature(session, request_user=user)
+            if feat:
+                features.append(feat)
+                
+        return Response({
+            "type": "FeatureCollection",
+            "features": features
+        }, status=status.HTTP_200_OK)
+

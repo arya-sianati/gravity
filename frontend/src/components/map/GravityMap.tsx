@@ -14,9 +14,8 @@ import { AreaHistoryModal } from '../history/AreaHistoryModal';
 const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const FALLBACK_CENTER: [number, number] = [-75.5085, 40.5985]; // Muhlenberg College campus
 
-// Persistent coordinates across tab switching
-let cachedCenter: [number, number] | null = null;
-let cachedZoom: number | null = null;
+// In-memory verified physical GPS coordinates (app session only)
+let lastKnownUserLocation: [number, number] | null = null;
 
 const OSM_RASTER_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -51,7 +50,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [bbox, setBbox] = useState<number[] | null>(null);
-  
+
   // Filtering
   const [hiddenActivities, setHiddenActivities] = useState<Set<string>>(new Set());
 
@@ -73,26 +72,34 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
     }
   }, [lastMessage]);
 
-  const handleRecenter = useCallback(() => {
+  const updateUserMarker = useCallback((lng: number, lat: number) => {
+    if (!mapRef.current) return;
+    if (!userMarkerRef.current) {
+      const el = document.createElement('div');
+      el.className = 'w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]';
+      userMarkerRef.current = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(mapRef.current);
+    } else {
+      userMarkerRef.current.setLngLat([lng, lat]);
+    }
+  }, []);
+
+  const requestLocation = useCallback(() => {
     setLocating(true);
     setGeoError(null);
     requestCurrentLocation(
       (loc) => {
         setLocating(false);
+        lastKnownUserLocation = [loc.longitude, loc.latitude];
+
         if (mapRef.current) {
-          cachedCenter = [loc.longitude, loc.latitude];
-          cachedZoom = 14;
           // Jump immediately without camera flight animation
-          mapRef.current.jumpTo({ center: [loc.longitude, loc.latitude], zoom: 14 });
+          mapRef.current.jumpTo({ center: [loc.longitude, loc.latitude], zoom: 15 });
+          updateUserMarker(loc.longitude, loc.latitude);
+          mapRef.current.resize();
           mapRef.current.triggerRepaint();
 
-          if (!userMarkerRef.current) {
-            const el = document.createElement('div');
-            el.className = 'w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]';
-            userMarkerRef.current = new maplibregl.Marker({ element: el }).setLngLat([loc.longitude, loc.latitude]).addTo(mapRef.current);
-          } else {
-            userMarkerRef.current.setLngLat([loc.longitude, loc.latitude]);
-          }
+          const bounds = mapRef.current.getBounds();
+          setBbox([bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]);
         }
       },
       (err) => {
@@ -100,7 +107,12 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         setGeoError(formatGeolocationErrorMessage(err));
       }
     );
-  }, []);
+  }, [updateUserMarker]);
+
+  // Request fresh location on EVERY mount/entry to the Map tab
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
 
   useEffect(() => {
     let map: maplibregl.Map | null = null;
@@ -131,8 +143,9 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         return;
       }
 
-      const initialCenter = cachedCenter || FALLBACK_CENTER;
-      const initialZoom = cachedZoom ?? 14;
+      // If user location was previously acquired in this app session, initialize at user GPS
+      const initialCenter = lastKnownUserLocation || FALLBACK_CENTER;
+      const initialZoom = lastKnownUserLocation ? 15 : 14;
 
       map = new maplibregl.Map({
         container: mapContainerRef.current,
@@ -304,21 +317,17 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         }).catch(err => console.error("Failed to load activities for map prep", err));
 
         if (mapRef.current) {
+          if (lastKnownUserLocation) {
+            updateUserMarker(lastKnownUserLocation[0], lastKnownUserLocation[1]);
+          }
           const bounds = mapRef.current.getBounds();
           setBbox([bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]);
-        }
-        if (!cachedCenter) {
-          handleRecenter();
         }
       });
 
       let timeout: ReturnType<typeof setTimeout>;
       map.on('moveend', () => {
         if (!map || disposed) return;
-        const c = map.getCenter();
-        cachedCenter = [c.lng, c.lat];
-        cachedZoom = map.getZoom();
-
         clearTimeout(timeout);
         timeout = setTimeout(() => {
           if (!map || disposed) return;
@@ -326,7 +335,6 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
           setBbox([bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]);
         }, 500);
       });
-
     };
 
     // Request animation frame before initializing to allow flex/grid layout computation
@@ -342,16 +350,12 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (resizeObserver) resizeObserver.disconnect();
       if (map) {
-        try {
-          const c = map.getCenter();
-          cachedCenter = [c.lng, c.lat];
-          cachedZoom = map.getZoom();
-        } catch {}
         map.remove();
       }
       mapRef.current = null;
+      userMarkerRef.current = null;
     };
-  }, [handleRecenter]);
+  }, [updateUserMarker]);
 
   useEffect(() => {
     if (!bbox || activities.length === 0) return;
@@ -449,7 +453,14 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
           {geoError}
         </div>
       )}
-      
+
+      {locating && !lastKnownUserLocation && (
+        <div className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 transform -translate-x-1/2 z-20 bg-gray-900/90 text-white px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-md pointer-events-none backdrop-blur-md flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping" />
+          <span>Finding your location...</span>
+        </div>
+      )}
+
       {/* Filters Overlay */}
       <div className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] right-4 z-20 flex flex-wrap gap-2 justify-end max-w-[70%]">
         {/* Pulse Soon Toggle Pill */}
@@ -486,7 +497,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
 
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
       <MapControls
-        onRecenter={handleRecenter}
+        onRecenter={requestLocation}
         locating={locating}
         onOpenHistory={() => {
           if (mapRef.current) {

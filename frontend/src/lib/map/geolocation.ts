@@ -27,7 +27,8 @@ export const formatGeolocationErrorMessage = (err: GeolocationError): string => 
 
 export const requestCurrentLocation = (
   onSuccess: (loc: GeolocationResult) => void,
-  onError: (err: GeolocationError) => void
+  onError: (err: GeolocationError) => void,
+  options?: PositionOptions
 ) => {
   if (!navigator.geolocation) {
     onError({ code: 0, message: 'Geolocation is not supported by your browser' });
@@ -47,8 +48,9 @@ export const requestCurrentLocation = (
     },
     {
       enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0,
+      timeout: 4000,
+      maximumAge: 15000,
+      ...options,
     }
   );
 };

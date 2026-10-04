@@ -3,7 +3,7 @@
 Last updated: 2026-10-03
 
 ## Current phase
-Phase 06 — Activity Sessions
+Phase 07 — Live Map Heat
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -12,13 +12,13 @@ Phase 06 — Activity Sessions
 - Phase 03 - Authentication & Profile
 - Phase 04 - Configurable Activity Engine
 - Phase 05 - Map Foundation
-  - Clean `seed_gravity` to preserve admin modifications.
-  - Installed `maplibre-gl` and built `GravityMap` and `MapControls` components.
-  - Implemented safe Geolocation API with permissions handling and recenter UI.
-  - Set up view bounding box tracking via `moveend` event for Phase 07 preparation.
-  - Prepared empty heatmap sources and layers using dynamic Activity Types.
-  - No WebSockets, Live Heat, or Session logic implemented (deferred to correct phases).
-  - Production build and backend test checks pass.
+- Phase 06 - Activity Sessions
+  - Implemented `ActivitySession` and `Participation` models using PostGIS.
+  - Enforced single active participation logic per user.
+  - Completed start, join, and leave session logic with `GET /api/sessions/nearby/` endpoint.
+  - Upgraded frontend `StartActivityScreen` to handle nearby matching and `Other` label input.
+  - Created live `ActiveActivityScreen` with client-side accurate elapsed timer.
+  - Added test suites mapping constraints and REST APIs successfully.
 
 ## In progress
 - None
@@ -45,4 +45,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 06: Activity Sessions.
+Begin Phase 07: Live Map Heat.

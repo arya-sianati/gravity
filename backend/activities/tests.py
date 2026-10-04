@@ -125,3 +125,83 @@ class SeedGravityCommandTest(TestCase):
         
         distance.refresh_from_db()
         self.assertEqual(distance.name, "Miles")
+
+from django.contrib.auth import get_user_model
+from django.contrib.gis.geos import Point
+from .models import ActivitySession, Participation
+
+User = get_user_model()
+
+class ActivitySessionTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="password")
+        self.user2 = User.objects.create_user(username="testuser2", password="password")
+        self.activity = ActivityType.objects.create(name="Tennis", slug="tennis", is_active=True, join_suggestion_radius_m=100)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_session(self):
+        url = reverse('session-list')
+        data = {
+            'activity_type': self.activity.id,
+            'lat': 40.0,
+            'lng': -73.0,
+        }
+        res = self.client.post(url, data)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(ActivitySession.objects.count(), 1)
+        self.assertEqual(Participation.objects.count(), 1)
+        
+        participation = Participation.objects.first()
+        self.assertEqual(participation.user, self.user)
+        self.assertEqual(participation.status, Participation.Status.ACTIVE)
+
+    def test_duplicate_active_participation_fails(self):
+        # Create first session
+        session1 = ActivitySession.objects.create(activity_type=self.activity, created_by=self.user, location=Point(-73.0, 40.0, srid=4326))
+        Participation.objects.create(session=session1, user=self.user, status=Participation.Status.ACTIVE)
+        
+        # Try to create second session
+        url = reverse('session-list')
+        res = self.client.post(url, {'activity_type': self.activity.id, 'lat': 40.1, 'lng': -73.1})
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+        
+    def test_join_session(self):
+        session = ActivitySession.objects.create(activity_type=self.activity, created_by=self.user2, location=Point(-73.0, 40.0, srid=4326))
+        Participation.objects.create(session=session, user=self.user2, status=Participation.Status.ACTIVE)
+        
+        url = reverse('session-join', args=[session.id])
+        res = self.client.post(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(Participation.objects.filter(session=session).count(), 2)
+
+    def test_leave_session(self):
+        session = ActivitySession.objects.create(activity_type=self.activity, created_by=self.user, location=Point(-73.0, 40.0, srid=4326))
+        part = Participation.objects.create(session=session, user=self.user, status=Participation.Status.ACTIVE)
+        
+        url = reverse('session-leave', args=[session.id])
+        res = self.client.post(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        
+        part.refresh_from_db()
+        self.assertEqual(part.status, Participation.Status.LEFT)
+        self.assertIsNotNone(part.left_at)
+        
+        session.refresh_from_db()
+        self.assertEqual(session.status, ActivitySession.Status.ENDED)
+        self.assertIsNotNone(session.ended_at)
+
+    def test_nearby_suggestion(self):
+        session = ActivitySession.objects.create(activity_type=self.activity, created_by=self.user2, location=Point(-73.0, 40.0, srid=4326))
+        Participation.objects.create(session=session, user=self.user2, status=Participation.Status.ACTIVE)
+        
+        url = reverse('session-nearby')
+        res = self.client.get(url, {'activity': 'tennis', 'lat': 40.0001, 'lng': -73.0})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]['id'], str(session.id))
+        
+        # Test out of bounds
+        res2 = self.client.get(url, {'activity': 'tennis', 'lat': 41.0, 'lng': -73.0})
+        self.assertEqual(len(res2.data), 0)
+

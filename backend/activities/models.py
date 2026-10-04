@@ -102,3 +102,86 @@ class ActivityMetric(models.Model):
 
     def __str__(self):
         return f"{self.activity_type.name} - {self.name}"
+
+import uuid
+from django.contrib.gis.db import models as gis_models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class ActivitySession(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        ENDED = 'ended', 'Ended'
+        CANCELLED = 'cancelled', 'Cancelled'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    activity_type = models.ForeignKey(ActivityType, related_name='sessions', on_delete=models.PROTECT)
+    created_by = models.ForeignKey(User, related_name='created_sessions', on_delete=models.PROTECT)
+    
+    # Geographic anchor location (WGS84)
+    location = gis_models.PointField(srid=4326)
+    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    label = models.CharField(max_length=50, blank=True, null=True, help_text="Short label for 'Other' activity")
+    
+    join_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['status', 'activity_type']),
+        ]
+
+    def __str__(self):
+        base = f"{self.activity_type.name} - {self.status}"
+        return f"{base} ({self.label})" if self.label else base
+
+
+class Participation(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        COMPLETED = 'completed', 'Completed'
+        LEFT = 'left', 'Left'
+        AUTO_STOPPED = 'auto_stopped', 'Auto Stopped'
+
+    class JoinMethod(models.TextChoices):
+        SELF = 'self', 'Self'
+        QR = 'qr', 'QR'
+        MAP = 'map', 'Map'
+        SUGGESTION = 'suggestion', 'Suggestion'
+        INVITE = 'invite', 'Invite'
+
+    session = models.ForeignKey(ActivitySession, related_name='participations', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='participations', on_delete=models.CASCADE)
+    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    join_method = models.CharField(max_length=20, choices=JoinMethod.choices, default=JoinMethod.SELF)
+    
+    joined_at = models.DateTimeField(auto_now_add=True)
+    left_at = models.DateTimeField(null=True, blank=True)
+    
+    # Placeholders for future auto-stop & heartbeats
+    outside_since = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-joined_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(status='active'),
+                name='unique_active_participation'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.session.activity_type.name} ({self.status})"

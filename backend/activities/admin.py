@@ -36,3 +36,26 @@ class ActivityTypeAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+from .models import ActivitySession, Participation
+
+class ParticipationInline(admin.TabularInline):
+    model = Participation
+    extra = 0
+    readonly_fields = ('joined_at', 'left_at')
+    fields = ('user', 'status', 'join_method', 'joined_at', 'left_at')
+
+@admin.register(ActivitySession)
+class ActivitySessionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'activity_type', 'status', 'created_by', 'started_at', 'ended_at')
+    list_filter = ('status', 'activity_type')
+    search_fields = ('id', 'created_by__username', 'label')
+    readonly_fields = ('started_at', 'ended_at', 'join_token', 'created_at', 'updated_at')
+    inlines = [ParticipationInline]
+
+@admin.register(Participation)
+class ParticipationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'session', 'status', 'join_method', 'joined_at')
+    list_filter = ('status', 'join_method')
+    search_fields = ('user__username', 'session__id')
+    readonly_fields = ('joined_at', 'left_at', 'created_at', 'updated_at')

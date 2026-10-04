@@ -128,3 +128,27 @@ class MetricsTestCase(TestCase):
         self.assertEqual(data['rows'][1]['user']['display_name'], 'testuser2')
         self.assertEqual(data['rows'][1]['value'], 5.0)
         self.assertEqual(data['rows'][1]['rank'], 2)
+
+    def test_competition_ranking_ties(self):
+        # We need 3 users
+        u3 = User.objects.create_user(username='u3', password='pw')
+        p1 = Participation.objects.create(session=self.session, user=self.user, status=Participation.Status.COMPLETED)
+        p2 = Participation.objects.create(session=self.session, user=self.user2, status=Participation.Status.COMPLETED)
+        p3 = Participation.objects.create(session=self.session, user=u3, status=Participation.Status.COMPLETED)
+        
+        MetricValue.objects.create(participation=p1, metric=self.metric_pts, value=100)
+        MetricValue.objects.create(participation=p2, metric=self.metric_pts, value=100)
+        MetricValue.objects.create(participation=p3, metric=self.metric_pts, value=90)
+        
+        res = self.client.get('/api/leaderboards/basketball/?period=all')
+        rows = res.json()['rows']
+        
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(rows[0]['value'], 100.0)
+        self.assertEqual(rows[0]['rank'], 1)
+        
+        self.assertEqual(rows[1]['value'], 100.0)
+        self.assertEqual(rows[1]['rank'], 1)
+        
+        self.assertEqual(rows[2]['value'], 90.0)
+        self.assertEqual(rows[2]['rank'], 3) # Competition ranking: 1, 1, 3

@@ -5,6 +5,8 @@ import { getActivities } from '../../api/activities';
 import type { ActivityType } from '../../api/activities';
 import { getLiveMap } from '../../api/map';
 import type { LiveMapFeatureCollection } from '../../api/map';
+import { getPulseSoon } from '../../api/pulse';
+import type { PulseSoonItem } from '../../api/pulse';
 import { MapControls } from './MapControls';
 import { useGravitySocket } from '../../lib/realtime/useGravitySocket';
 import { AreaHistoryModal } from '../history/AreaHistoryModal';
@@ -27,6 +29,10 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
   
   // Filtering
   const [hiddenActivities, setHiddenActivities] = useState<Set<string>>(new Set());
+
+  // Pulse Soon Forecasting Overlay
+  const [showSoon, setShowSoon] = useState<boolean>(true);
+  const [soonItems, setSoonItems] = useState<PulseSoonItem[]>([]);
 
   // Area History Inspection
   const [historyCoords, setHistoryCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -54,6 +60,74 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
     });
 
     mapRef.current.on('load', () => {
+      // 1. Setup Pulse Soon Source & Layers (Translucent + Patterned/Dashed Outline)
+      if (!mapRef.current!.getSource('pulse-soon-source')) {
+        mapRef.current!.addSource('pulse-soon-source', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] }
+        });
+
+        // Translucent polygon fill
+        mapRef.current!.addLayer({
+          id: 'pulse-soon-fill',
+          type: 'fill',
+          source: 'pulse-soon-source',
+          paint: {
+            'fill-color': ['get', 'color'],
+            'fill-opacity': 0.22,
+          }
+        });
+
+        // Dashed/hatched patterned outline
+        mapRef.current!.addLayer({
+          id: 'pulse-soon-outline',
+          type: 'line',
+          source: 'pulse-soon-source',
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 2.5,
+            'line-dasharray': [3, 2],
+            'line-opacity': 0.85,
+          }
+        });
+
+        // Interactive popup on clicking forecasted region
+        mapRef.current!.on('click', 'pulse-soon-fill', (e) => {
+          if (!e.features || e.features.length === 0) return;
+          const props = e.features[0].properties;
+          if (!props) return;
+
+          new maplibregl.Popup({ closeButton: true, className: 'gravity-soon-popup' })
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="font-family: sans-serif; color: #111; padding: 4px; min-width: 180px;">
+                <div style="display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 13px;">
+                  <span>${props.icon || '🔮'}</span>
+                  <span>${props.name} (Soon)</span>
+                </div>
+                <div style="font-size: 11px; color: #4338ca; font-weight: 600; margin-top: 4px;">
+                  🕒 ${props.window}
+                </div>
+                <div style="font-size: 11px; color: #047857; margin-top: 2px;">
+                  ⭐ ${props.confidence}
+                </div>
+                <div style="font-size: 11px; color: #4b5563; margin-top: 4px;">
+                  ${props.reason}
+                </div>
+              </div>
+            `)
+            .addTo(mapRef.current!);
+        });
+
+        mapRef.current!.on('mouseenter', 'pulse-soon-fill', () => {
+          if (mapRef.current) mapRef.current.getCanvas().style.cursor = 'pointer';
+        });
+
+        mapRef.current!.on('mouseleave', 'pulse-soon-fill', () => {
+          if (mapRef.current) mapRef.current.getCanvas().style.cursor = '';
+        });
+      }
+
       getActivities().then(data => {
         setActivities(data);
         data.forEach(act => {
@@ -114,6 +188,11 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
     });
 
     mapRef.current.on('click', (e) => {
+      // If clicking on a pulse-soon-fill polygon, don't open generic area history modal
+      const soonFeatures = mapRef.current?.queryRenderedFeatures(e.point, { layers: ['pulse-soon-fill'] });
+      if (soonFeatures && soonFeatures.length > 0) {
+        return;
+      }
       setHistoryCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       setHistoryModalOpen(true);
     });
@@ -155,7 +234,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
   useEffect(() => {
     if (!bbox || activities.length === 0) return;
 
-    const fetchLiveHeat = async () => {
+    const fetchMapData = async () => {
       try {
         const liveData = await getLiveMap(bbox);
         dataRef.current = liveData;
@@ -175,13 +254,60 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
       } catch (err) {
         console.error("Failed to fetch live heat map", err);
       }
+
+      // Fetch Pulse Soon forecasts around current viewport center
+      try {
+        if (mapRef.current) {
+          const center = mapRef.current.getCenter();
+          const soonData = await getPulseSoon({
+            lat: center.lat,
+            lng: center.lng,
+            radius: 12000,
+          });
+          setSoonItems(soonData.items);
+        }
+      } catch (err) {
+        console.error("Failed to fetch pulse soon forecasts", err);
+      }
     };
 
-    fetchLiveHeat();
+    fetchMapData();
     // Reverted polling from 15s to 30s since WebSockets are primary
-    const interval = setInterval(fetchLiveHeat, 30000);
+    const interval = setInterval(fetchMapData, 30000);
     return () => clearInterval(interval);
   }, [bbox, activities, hiddenActivities, lastBboxFetchTs]);
+
+  // Synchronize Pulse Soon GeoJSON source
+  useEffect(() => {
+    const source = mapRef.current?.getSource('pulse-soon-source') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    if (!showSoon) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    const features = soonItems
+      .filter((item) => !hiddenActivities.has(item.activity.slug))
+      .map((item) => ({
+        type: 'Feature' as const,
+        geometry: item.geometry,
+        properties: {
+          name: item.activity.name,
+          slug: item.activity.slug,
+          icon: item.activity.icon,
+          color: item.activity.color || '#6366f1',
+          window: item.expected_window.display,
+          confidence: item.confidence_display,
+          reason: item.reason,
+        },
+      }));
+
+    source.setData({
+      type: 'FeatureCollection',
+      features,
+    });
+  }, [soonItems, showSoon, hiddenActivities]);
 
   const toggleActivityFilter = (slug: string) => {
     setHiddenActivities(prev => {
@@ -202,6 +328,19 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
       
       {/* Filters Overlay */}
       <div className="absolute top-4 right-4 z-10 flex flex-wrap gap-2 justify-end max-w-[70%]">
+        {/* Pulse Soon Toggle Pill */}
+        <button
+          onClick={() => setShowSoon(!showSoon)}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm transition-all flex items-center gap-1.5 ${
+            showSoon
+              ? 'bg-indigo-600 border-indigo-400 text-white shadow-indigo-600/30'
+              : 'bg-gray-800 border-gray-700 text-gray-500 opacity-70'
+          }`}
+          title="Toggle forecasted recurring activity patterns"
+        >
+          <span>🔮</span>
+          <span>Forecasts {showSoon ? 'ON' : 'OFF'}</span>
+        </button>
         {activities.map(act => {
           const isHidden = hiddenActivities.has(act.slug);
           return (

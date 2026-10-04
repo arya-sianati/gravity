@@ -600,6 +600,97 @@ class PulseNowAPIView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+from .logic.forecast_service import get_pulse_soon
+
+class PulseSoonAPIView(APIView):
+    """
+    Returns upcoming historically recurring activity predictions for near-term horizon.
+    """
+    permission_classes = []
+
+    def get(self, request):
+        lat_str = request.query_params.get('lat')
+        lng_str = request.query_params.get('lng')
+
+        if lat_str is None or lng_str is None:
+            return Response(
+                {"detail": "Both lat and lng query parameters are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            lat = float(lat_str)
+            lng = float(lng_str)
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": "Invalid latitude or longitude value."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        radius = None
+        radius_str = request.query_params.get('radius')
+        if radius_str is not None:
+            try:
+                radius = float(radius_str)
+                if radius <= 0:
+                    return Response(
+                        {"detail": "Radius must be greater than 0."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid radius parameter."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        horizon_minutes = None
+        horizon_str = request.query_params.get('horizon_minutes')
+        if horizon_str is not None:
+            try:
+                horizon_minutes = int(horizon_str)
+                if horizon_minutes <= 0:
+                    return Response(
+                        {"detail": "horizon_minutes must be greater than 0."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid horizon_minutes parameter."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        limit = 20
+        limit_str = request.query_params.get('limit')
+        if limit_str is not None:
+            try:
+                limit = int(limit_str)
+                if limit <= 0:
+                    return Response(
+                        {"detail": "Limit must be greater than 0."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid limit parameter."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        activity_slug = request.query_params.get('activity')
+
+        try:
+            data = get_pulse_soon(
+                lat=lat,
+                lng=lng,
+                radius_m=radius,
+                horizon_minutes=horizon_minutes,
+                activity_slug=activity_slug,
+                limit=limit,
+            )
+            return Response(data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 from .logic.history_service import get_area_history
 
 class AreaHistoryAPIView(APIView):

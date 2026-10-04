@@ -10,6 +10,7 @@ from .views import (
     ParticipationMetricsAPIView,
     LeaderboardAPIView,
     PulseNowAPIView,
+    PulseSoonAPIView,
     AreaHistoryAPIView,
 )
 
@@ -32,6 +33,7 @@ from .views import (
 
 urlpatterns = [
     path('pulse/now/', PulseNowAPIView.as_view(), name='pulse-now'),
+    path('pulse/soon/', PulseSoonAPIView.as_view(), name='pulse-soon'),
     path('map/live/', LiveMapAPIView.as_view(), name='map-live'),
     path('join/<uuid:token>/', JoinTokenAPIView.as_view(), name='join-token'),
     path('activity-types/', ActivityTypeListAPIView.as_view(), name='activity-type-list'),

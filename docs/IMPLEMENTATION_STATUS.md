@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 19 — Gravity History / Area Reputation (Complete)
+Phase 20 — Pulse Soon / Historical Forecasting (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -62,12 +62,18 @@ Phase 19 — Gravity History / Area Reputation (Complete)
   - Dynamic ActivityType support automatically functioning for custom activities (e.g. Pickleball) with color, icon, and name styling.
   - Frontend TypeScript client `frontend/src/api/history.ts`, interactive `AreaHistoryModal.tsx` inspection sheet with period chips, radius selector, dominant activity banner, share bars, and pattern summaries, integrated directly into `GravityMap.tsx` (map clicks and controls) and `PulseScreen.tsx`.
   - Dedicated automated test suite `activities/tests_phase19.py` (14 comprehensive tests; 167 tests passing repository-wide).
+- Phase 20 - Pulse Soon / Historical Forecasting
+  - Near-term recurring activity forecasting engine in `forecast_service.py` using explainable, deterministic statistical heuristics (recurrence across weeks, day-of-week matching, 2-hour diurnal windows, volume, recency decay, and proximity) with zero black-box AI.
+  - Spatial grouping into coarse geographic cells (~350m grid via `snap_to_grid`) generating 16-point circular polygon GeoJSON geometries; never exposes raw coordinates or user identities.
+  - Dual privacy anonymity gates: strictly requires both `unique_users >= GRAVITY_HISTORY_MIN_PARTICIPANTS` (3) and `distinct_weeks >= GRAVITY_FORECAST_MIN_OCCURRENCES` (3) to suppress single-user or one-time routines.
+  - Live duplicate suppression: automatically detects active sessions matching activity type and cell, omitting redundant "Soon" predictions.
+  - RESTful endpoint `GET /api/pulse/soon/` with full validation of `lat`, `lng`, `radius`, `horizon_minutes`, `activity`, and `limit`.
+  - Frontend Pulse screen segmented control (`Pulse Now` / `Pulse Soon`) with confidence pills (Very strong / Strong / Moderate pattern), pattern explanation reasons, historical evidence metrics, and Gravity Event XP bonus integration.
+  - Frontend MapLibre overlay: distinct translucent fill (`pulse-soon-fill`) and patterned dashed outline (`pulse-soon-outline`) with interactive inspection popups and a forecast toggle control.
+  - Dedicated automated test suite in `activities/tests_phase20.py` (18 comprehensive tests; 185 tests passing repository-wide).
 
 ## Next phase
-- Phase 20 — Pulse Soon / Forecasting
-
-## In progress
-- None
+- Phase 21 — PWA Polish / Final Hardening
 
 ## In progress
 - None
@@ -96,4 +102,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 17: Challenges.
+Begin Phase 21: PWA Polish / Final Hardening.

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getActivities } from '../api/activities';
 import type { ActivityType } from '../api/activities';
-import { getPulseNow } from '../api/pulse';
-import type { PulseItem } from '../api/pulse';
+import { getPulseNow, getPulseSoon } from '../api/pulse';
+import type { PulseItem, PulseSoonItem } from '../api/pulse';
 import { joinSession } from '../api/sessions';
 import { requestCurrentLocation } from '../lib/map/geolocation';
 import { useGravitySocket } from '../lib/realtime/useGravitySocket';
@@ -14,6 +14,9 @@ export const PulseScreen: React.FC = () => {
   const navigate = useNavigate();
   const { activeSession, refreshActiveSession } = useActiveSession();
 
+  // Mode: Now vs Soon
+  const [pulseMode, setPulseMode] = useState<'now' | 'soon'>('now');
+
   // Location state
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState<boolean>(true);
@@ -23,13 +26,18 @@ export const PulseScreen: React.FC = () => {
   const [activities, setActivities] = useState<ActivityType[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<string>('all');
 
-  // Pulse feed state
+  // Pulse Now state
   const [items, setItems] = useState<PulseItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
+
+  // Pulse Soon state
+  const [soonItems, setSoonItems] = useState<PulseSoonItem[]>([]);
+  const [soonLoading, setSoonLoading] = useState<boolean>(false);
+  const [soonError, setSoonError] = useState<string | null>(null);
 
   // Realtime updates
   const { lastMessage } = useGravitySocket('/ws/gravity/');
@@ -91,19 +99,50 @@ export const PulseScreen: React.FC = () => {
     }
   }, [coords, selectedActivity]);
 
-  // Refetch when coords or selected activity changes
+  // Fetch Pulse Soon items
+  const fetchSoonFeed = useCallback(async (isBackground = false) => {
+    if (!coords) return;
+    if (!isBackground) setSoonLoading(true);
+    setSoonError(null);
+
+    try {
+      const data = await getPulseSoon({
+        lat: coords.lat,
+        lng: coords.lng,
+        activity: selectedActivity === 'all' ? undefined : selectedActivity,
+      });
+      setSoonItems(data.items);
+    } catch (err: any) {
+      console.error('Pulse soon feed error', err);
+      if (!isBackground) {
+        setSoonError(err.response?.data?.detail || 'Failed to load upcoming forecasts.');
+      }
+    } finally {
+      if (!isBackground) setSoonLoading(false);
+    }
+  }, [coords, selectedActivity]);
+
+  // Refetch when coords, selected activity, or pulseMode changes
   useEffect(() => {
     if (coords) {
-      fetchPulseFeed();
+      if (pulseMode === 'now') {
+        fetchPulseFeed();
+      } else {
+        fetchSoonFeed();
+      }
     }
-  }, [coords, selectedActivity, fetchPulseFeed]);
+  }, [coords, selectedActivity, pulseMode, fetchPulseFeed, fetchSoonFeed]);
 
   // Realtime refetch on map_changed
   useEffect(() => {
     if (lastMessage?.type === 'map.changed' || lastMessage?.type === 'map_changed') {
-      fetchPulseFeed(true);
+      if (pulseMode === 'now') {
+        fetchPulseFeed(true);
+      } else {
+        fetchSoonFeed(true);
+      }
     }
-  }, [lastMessage, fetchPulseFeed]);
+  }, [lastMessage, pulseMode, fetchPulseFeed, fetchSoonFeed]);
 
   // Background refetch on visibilitychange & periodic reconciliation polling
   useEffect(() => {
@@ -178,14 +217,14 @@ export const PulseScreen: React.FC = () => {
               <span>Reputation</span>
             </button>
             <button
-              onClick={() => fetchPulseFeed()}
-              disabled={loading}
+              onClick={() => (pulseMode === 'now' ? fetchPulseFeed() : fetchSoonFeed())}
+              disabled={pulseMode === 'now' ? loading : soonLoading}
               className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors active:scale-95"
               title="Refresh feed"
               aria-label="Refresh feed"
             >
               <svg
-                className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}
+                className={`w-5 h-5 ${(pulseMode === 'now' ? loading : soonLoading) ? 'animate-spin' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -196,6 +235,37 @@ export const PulseScreen: React.FC = () => {
           </div>
         )}
       </header>
+
+      {/* Mode Switcher: Now vs Soon */}
+      <div className="px-4 py-2 bg-gray-900/90 border-b border-gray-800/80 flex items-center justify-center">
+        <div className="flex bg-gray-950/80 p-1 rounded-2xl border border-gray-800 w-full max-w-xs shadow-inner">
+          <button
+            onClick={() => setPulseMode('now')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              pulseMode === 'now'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>Pulse Now</span>
+          </button>
+          <button
+            onClick={() => setPulseMode('soon')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              pulseMode === 'soon'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span>🔮</span>
+            <span>Pulse Soon</span>
+          </button>
+        </div>
+      </div>
 
       {/* Join Toast Error */}
       {joinError && (
@@ -255,6 +325,152 @@ export const PulseScreen: React.FC = () => {
               Enable Location & Retry
             </button>
           </div>
+        ) : pulseMode === 'soon' ? (
+          soonLoading && soonItems.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-center p-6 space-y-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+              <p className="text-sm text-gray-400">Forecasting near-term activity patterns...</p>
+            </div>
+          ) : soonError ? (
+            <div className="h-64 flex flex-col items-center justify-center text-center p-6 bg-gray-900/40 rounded-2xl border border-gray-800 space-y-3">
+              <p className="text-sm text-red-400">{soonError}</p>
+              <button
+                onClick={() => fetchSoonFeed()}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : soonItems.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/80 space-y-4">
+              <div className="w-12 h-12 rounded-full bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center text-2xl">
+                🔮
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold text-white">No upcoming recurring patterns</h2>
+                <p className="text-xs text-gray-400 max-w-xs">
+                  {selectedActivity !== 'all'
+                    ? `No recurring ${activities.find((a) => a.slug === selectedActivity)?.name || 'activity'} predicted nearby in the next 2 hours.`
+                    : 'Not enough recurring Gravity activity here yet. Real recurring patterns appear once activities happen consistently across multiple weeks.'}
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/start')}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-600/30 transition-all active:scale-95"
+              >
+                + Start an Activity
+              </button>
+            </div>
+          ) : (
+            soonItems.map((item, idx) => {
+              const confColors =
+                item.confidence_level === 'very_strong'
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
+                  : item.confidence_level === 'strong'
+                  ? 'bg-indigo-950/80 text-indigo-300 border-indigo-700/60'
+                  : 'bg-amber-950/80 text-amber-300 border-amber-700/60';
+
+              return (
+                <div
+                  key={`${item.activity.slug}-${item.area.lat}-${item.area.lng}-${idx}`}
+                  className="bg-gray-900/80 rounded-2xl border border-gray-800 hover:border-gray-700/80 transition-all p-4 shadow-sm flex flex-col gap-3 relative overflow-hidden"
+                >
+                  {/* Event multiplier badge */}
+                  {item.event && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-yellow-500 text-black font-extrabold text-[10px] px-3 py-0.5 rounded-bl-xl shadow-md uppercase tracking-wider flex items-center gap-1">
+                      <span>⚡</span>
+                      <span>
+                        {item.event.xp_multiplier > 1.0
+                          ? `${item.event.xp_multiplier}× XP Event`
+                          : item.event.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Card Top: Icon, Title, Activity, Confidence */}
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-inner shrink-0"
+                      style={{ backgroundColor: `${item.activity.color || '#6366F1'}20` }}
+                    >
+                      <span>{item.activity.icon}</span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="font-bold text-white text-base truncate">
+                          {item.activity.name}
+                        </h2>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${confColors} shrink-0`}
+                        >
+                          {item.confidence_display}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-y-1 gap-x-2.5 text-xs text-gray-400 mt-1">
+                        <span className="flex items-center gap-1 text-indigo-300 font-medium">
+                          <span>🕒</span>
+                          {item.expected_window.display}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 text-blue-400">
+                          <span>📍</span>
+                          {item.distance.display}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reason Banner */}
+                  <div className="bg-gray-950/60 rounded-xl px-3 py-2 border border-gray-800/80 text-xs text-gray-300 leading-relaxed">
+                    <span className="text-gray-400 mr-1.5">Pattern:</span>
+                    {item.reason}
+                  </div>
+
+                  {/* Historical Evidence Chips */}
+                  <div className="flex flex-wrap gap-2 text-[11px]">
+                    <span className="px-2.5 py-1 bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-300 flex items-center gap-1">
+                      <span>👥</span>
+                      <span>~{item.historical_evidence.typical_participants} typical</span>
+                    </span>
+                    <span className="px-2.5 py-1 bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-300 flex items-center gap-1">
+                      <span>📅</span>
+                      <span>
+                        {item.historical_evidence.matching_weeks}/{item.historical_evidence.total_lookback_weeks} weeks
+                      </span>
+                    </span>
+                    <span className="px-2.5 py-1 bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-300 flex items-center gap-1">
+                      <span>📊</span>
+                      <span>{item.historical_evidence.observations} sessions</span>
+                    </span>
+                  </div>
+
+                  {/* Card Bottom: Start & View on Map Buttons */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-gray-800/60">
+                    <button
+                      onClick={() =>
+                        navigate('/start', { state: { activitySlug: item.activity.slug } })
+                      }
+                      className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <span>+ Start Activity</span>
+                      <span className="text-indigo-300">→</span>
+                    </button>
+
+                    <button
+                      onClick={() => navigate('/')}
+                      className="py-2 px-3.5 bg-gray-800 hover:bg-gray-700/80 text-gray-300 hover:text-white rounded-xl text-xs font-medium border border-gray-700/60 transition-all flex items-center gap-1 active:scale-95"
+                      title="View on Map"
+                    >
+                      <span>🗺️</span>
+                      <span>Map</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )
         ) : loading && items.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-6 space-y-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>

@@ -78,6 +78,26 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
         resp_serializer = ActivitySessionSerializer(session)
         return Response(resp_serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['get'])
+    def join_code(self, request, pk=None):
+        session = self.get_object()
+        
+        # Must be an active participant
+        if not Participation.objects.filter(session=session, user=request.user, status=Participation.Status.ACTIVE).exists():
+            return Response({"detail": "You must be an active participant to get the join code."}, status=status.HTTP_403_FORBIDDEN)
+            
+        if session.status != ActivitySession.Status.ACTIVE:
+            return Response({"detail": "Session is no longer active."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from django.conf import settings
+        base_url = getattr(settings, 'PUBLIC_BASE_URL', 'http://localhost:5173')
+        join_url = f"{base_url.rstrip('/')}/join/{session.join_token}"
+        
+        return Response({
+            "join_url": join_url,
+            "expires_at": None
+        })
+
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def join(self, request, pk=None):
@@ -188,6 +208,11 @@ from .services import get_privacy_safe_feature
 
 class LiveMapAPIView(APIView):
     permission_classes = []
+    # Public map can be viewed by anyone, but maybe we require auth?
+    # Prompt: "No API response or WebSocket-ready payload should accidentally include a private exact location."
+    # Let's allow unauthenticated viewing (or maybe authenticated only?)
+    # "Session mutations reject unauthenticated users." Map view might be authenticated. Let's use AllowAny or IsAuthenticated.
+    # The specification says "Gravity is browsable...". Let's allow unauthenticated, but pass request.user if authenticated.
     
     def get(self, request):
         bbox_str = request.query_params.get('bbox')
@@ -202,11 +227,15 @@ class LiveMapAPIView(APIView):
         if west >= east or south >= north:
             return Response({"detail": "Invalid bbox coordinate ordering."}, status=status.HTTP_400_BAD_REQUEST)
             
+        if not (-180 <= west <= 180 and -180 <= east <= 180 and -90 <= south <= 90 and -90 <= north <= 90):
+            return Response({"detail": "Impossible latitude/longitude bbox values."}, status=status.HTTP_400_BAD_REQUEST)
+            
         bbox_polygon = Polygon.from_bbox((west, south, east, north))
         
         # Query active sessions within bbox
         sessions = ActivitySession.objects.filter(
             status=ActivitySession.Status.ACTIVE,
+            activity_type__is_active=True,
             location__within=bbox_polygon
         ).select_related('created_by', 'activity_type').annotate(
             active_count=Count('participations', filter=Q(participations__status=Participation.Status.ACTIVE))
@@ -226,4 +255,60 @@ class LiveMapAPIView(APIView):
             "type": "FeatureCollection",
             "features": features
         }, status=status.HTTP_200_OK)
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.shortcuts import get_object_or_404
+from django.conf import settings
+import urllib.parse
+
+class JoinTokenAPIView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request, token):
+        session = get_object_or_404(ActivitySession, join_token=token)
+        if session.status != ActivitySession.Status.ACTIVE:
+            return Response({"detail": "This session is no longer active."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        active_count = session.participations.filter(status=Participation.Status.ACTIVE).count()
+        return Response({
+            "activity": {
+                "name": session.activity_type.name,
+                "slug": session.activity_type.slug,
+                "icon": session.activity_type.icon,
+                "color": session.activity_type.color,
+            },
+            "label": session.label,
+            "status": session.status,
+            "participant_count": active_count,
+            "started_at": session.started_at,
+        })
+        
+    def post(self, request, token):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_403_FORBIDDEN)
+            
+        session = get_object_or_404(ActivitySession, join_token=token)
+        
+        if session.status != ActivitySession.Status.ACTIVE:
+            return Response({"detail": "Session is not active."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not session.activity_type.is_active:
+            return Response({"detail": "This activity type is disabled."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if Participation.objects.filter(session=session, user=request.user, status=Participation.Status.ACTIVE).exists():
+            return Response({"detail": "You are already active in this session."}, status=status.HTTP_409_CONFLICT)
+
+        if Participation.objects.filter(user=request.user, status=Participation.Status.ACTIVE).exists():
+            return Response({"detail": "You are already active in another session."}, status=status.HTTP_409_CONFLICT)
+
+        Participation.objects.create(
+            session=session,
+            user=request.user,
+            status=Participation.Status.ACTIVE,
+            join_method=Participation.JoinMethod.QR
+        )
+
+        return Response(ActivitySessionSerializer(session).data, status=status.HTTP_200_OK)
 

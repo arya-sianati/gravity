@@ -89,3 +89,46 @@ class LiveMapTest(TestCase):
         self.assertNotIn('lat', res.data)
         self.assertNotIn('lng', res.data)
 
+    def test_disabled_activity_omitted(self):
+        # 6. Disabled Activity Type behavior
+        self.activity.is_active = False
+        self.activity.save()
+        s1 = ActivitySession.objects.create(activity_type=self.activity, created_by=self.user_exact, location=Point(10, 10, srid=4326))
+        Participation.objects.create(session=s1, user=self.user_exact, status=Participation.Status.ACTIVE)
+        res = self.client.get(reverse('map-live'), {'bbox': '9,9,11,11'})
+        self.assertEqual(len(res.data['features']), 0)
+        self.activity.is_active = True
+        self.activity.save()
+
+    def test_impossible_bbox(self):
+        # 8. Impossible latitude/longitude bbox values are rejected
+        res = self.client.get(reverse('map-live'), {'bbox': '10,91,20,100'})
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        res2 = self.client.get(reverse('map-live'), {'bbox': '-190,10,-170,20'})
+        self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_multiple_activities_serialize(self):
+        # 18. Different Activity Types serialize independently
+        a2 = ActivityType.objects.create(name="Run", slug="run", is_active=True, heat_weight_multiplier=1.0)
+        
+        s1 = ActivitySession.objects.create(activity_type=self.activity, created_by=self.user_exact, location=Point(10.001, 10.001, srid=4326))
+        Participation.objects.create(session=s1, user=self.user_exact, status=Participation.Status.ACTIVE)
+        
+        s2 = ActivitySession.objects.create(activity_type=a2, created_by=self.user_blur, location=Point(10.002, 10.002, srid=4326))
+        Participation.objects.create(session=s2, user=self.user_blur, status=Participation.Status.ACTIVE)
+        
+        res = self.client.get(reverse('map-live'), {'bbox': '9,9,11,11'})
+        features = res.data['features']
+        self.assertEqual(len(features), 2)
+        slugs = [f['properties']['activity_slug'] for f in features]
+        self.assertIn("maptest", slugs)
+        self.assertIn("run", slugs)
+        
+        # 19 & 20. Participant identities are not included in public map GeoJSON
+        for f in features:
+            props = f['properties']
+            self.assertNotIn('username', props)
+            self.assertNotIn('email', props)
+            self.assertNotIn('user_id', props)
+            self.assertNotIn('created_by', props)

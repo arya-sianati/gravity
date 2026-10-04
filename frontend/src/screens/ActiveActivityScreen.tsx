@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { getJoinCode } from '../api/sessions';
@@ -6,6 +7,7 @@ import { MetricEntryForm } from '../components/MetricEntryForm';
 import type { MetricEntryFormHandle } from '../components/MetricEntryForm';
 
 export const ActiveActivityScreen: React.FC = () => {
+  const navigate = useNavigate();
   const { activeSession, leaveActiveSession, graceWarning } = useActiveSession();
   const [elapsed, setElapsed] = useState<string>('00:00:00');
   const [leaving, setLeaving] = useState(false);
@@ -41,8 +43,10 @@ export const ActiveActivityScreen: React.FC = () => {
       try {
         const data = await getJoinCode(activeSession.id);
         setJoinUrl(data.join_url);
-      } catch (err) {
-        alert('Failed to get join QR.');
+      } catch (err: any) {
+        console.error('Failed to get join QR:', err);
+        const msg = err?.response?.data?.error || err?.response?.data?.detail || err?.message || 'Unknown error';
+        alert(`Failed to get join QR: ${msg}`);
         setShowQR(false);
       } finally {
         setLoadingQR(false);
@@ -65,6 +69,7 @@ export const ActiveActivityScreen: React.FC = () => {
     setLeaving(true);
     try {
       await leaveActiveSession();
+      navigate('/', { replace: true });
     } catch (err) {
       alert('Failed to leave session');
       setLeaving(false);

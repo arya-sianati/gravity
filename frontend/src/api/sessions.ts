@@ -91,7 +91,7 @@ export const getActiveParticipation = async (): Promise<ActivitySession | null> 
 };
 
 export const getJoinCode = async (sessionId: string): Promise<{ join_url: string; expires_at: string | null }> => {
-  const response = await apiClient.get(`/sessions/${sessionId}/join-code/`);
+  const response = await apiClient.get(`/sessions/${sessionId}/join_code/`);
   return response.data;
 };
 

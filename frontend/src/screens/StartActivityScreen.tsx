@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router';
 import { getActivities } from '../api/activities';
 import type { ActivityType } from '../api/activities';
 import { startSession, getNearbySessions, joinSession } from '../api/sessions';
@@ -8,7 +9,18 @@ import { useActiveSession } from '../context/ActiveSessionContext';
 import { ActiveActivityScreen } from './ActiveActivityScreen';
 
 export const StartActivityScreen: React.FC = () => {
+  const navigate = useNavigate();
   const { activeSession, refreshActiveSession } = useActiveSession();
+  const hadActiveSession = useRef(false);
+
+  useEffect(() => {
+    if (activeSession) {
+      hadActiveSession.current = true;
+    } else if (hadActiveSession.current) {
+      hadActiveSession.current = false;
+      navigate('/', { replace: true });
+    }
+  }, [activeSession, navigate]);
   
   const [activities, setActivities] = useState<ActivityType[]>([]);
   const [loading, setLoading] = useState(true);

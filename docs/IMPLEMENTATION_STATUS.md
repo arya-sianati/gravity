@@ -17,6 +17,10 @@ Phase 02 — Frontend Foundation
   - Created `admin` superuser.
   - Verified PostGIS and Redis connectivity.
   - Added and passed basic foundation tests.
+- Security Correction
+  - Revoked `SUPERUSER` from `gravity_user`.
+  - Created `template_postgis` template database.
+  - Configured Django to use `template_postgis` for testing.
 
 ## In progress
 - None
@@ -39,9 +43,15 @@ python manage.py migrate
 # Create DB (if starting fresh)
 sudo -u postgres psql -c "CREATE DATABASE gravity;"
 sudo -u postgres psql -c "CREATE USER gravity_user WITH PASSWORD 'gravity_pass';"
+sudo -u postgres psql -c "ALTER ROLE gravity_user CREATEDB;"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE gravity TO gravity_user;"
 sudo -u postgres psql -d gravity -c "CREATE EXTENSION postgis;"
 sudo -u postgres psql -d gravity -c "ALTER SCHEMA public OWNER TO gravity_user;"
+
+# Create template DB for testing
+sudo -u postgres psql -c "CREATE DATABASE template_postgis;"
+sudo -u postgres psql -d template_postgis -c "CREATE EXTENSION postgis;"
+sudo -u postgres psql -c "UPDATE pg_database SET datistemplate = TRUE WHERE datname = 'template_postgis';"
 ```
 
 ## Next recommended task

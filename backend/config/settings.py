@@ -89,6 +89,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': env.db('DATABASE_URL', default='postgis://gravity_user:gravity_pass@127.0.0.1:5432/gravity')
 }
+DATABASES['default']['TEST'] = {
+    'TEMPLATE': 'template_postgis',
+}
 
 
 # Password validation

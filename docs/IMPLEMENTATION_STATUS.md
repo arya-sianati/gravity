@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 23 — Demo Hardening & Final Acceptance (Complete)
+Phase 22 — Production Deployment (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -93,28 +93,15 @@ Phase 23 — Demo Hardening & Final Acceptance (Complete)
   - Production WebSocket handshake verified over TLS (`wss://gravity.college/ws/gravity/`) with `AllowedHostsOriginValidator` and Redis channel layer.
   - Comprehensive two-client smoke test passing across session creation, QR join URL generation (`https://gravity.college/join/<token>`), unauthenticated preview, QR join, real-time participant updates, heartbeat tracking, and session leaves.
   - Automated deployment helper script created at `scripts/deploy.sh` and full operations guide documented in `docs/GRAVITY_DEPLOYMENT.md`.
-- Phase 23 - Demo Hardening & Final Acceptance
-  - Production hardening on canonical domain `https://gravity.college` (A+ TLS configuration, HTTP/HTTPS and WWW/apex 301 redirects, Daphne ASGI daemon, PostgreSQL 15 PostGIS, Redis 7 channel layer).
-  - Idempotent demo dataset seeder command `seed_demo.py` with `--reset`, `--lat`, `--lng` parameters defaulting to Muhlenberg College campus (`40.5985`, `-75.5085`).
-  - Configured 4 realistic demo personas (`demo_alex`, `demo_jordan`, `demo_sam`, `demo_taylor`) with common password `MuleHacks2026!`, realistic levels, XP, streaks, badges, and distinct privacy settings (Friends, Blurred, Exact).
-  - Active event (`MuleHacks 2026 Activity Boost`, 2x XP multiplier, 25 XP flat bonus), active season (`MuleHacks Season 1` with live basketball standings), and friend challenge (`[Demo] First to 5 Pickleball Wins`).
-  - Live active sessions seeded across campus: East Court Pickup Game (Basketball), Library Group Study (Studying), Campus Perimeter Jog (Running), and Strength & Conditioning (Workout).
-  - Concluded historical sessions seeded for Area History: 7 sessions, 21 participations, Basketball dominant activity (42.9%), peak time 12:00-15:00.
-  - Recurring historical sessions seeded across 4 consecutive weeks for Pulse Soon predictive forecasting: diurnal 2-hour window (14:00-16:00), 85% confidence score ("Very strong pattern"), 300m generalized polygon overlay.
-  - Robust signal handler fix in `backend/activities/signals.py` handling cascade deletion gracefully without crashing transaction commits.
-  - Comprehensive MuleHacks demo guide and pitch playbook created in `docs/MULEHACKS_DEMO_GUIDE.md`.
-  - Single end-of-phase full backend test suite executed: 185/185 tests passing in 752.7s (0 failures, 0 errors).
-  - Django system check: 0 issues identified.
-  - Frontend production build: Vite v8.3.2 bundle compiled in 2.75s with 28 precached Workbox service worker entries.
 
 ## Next phase
-- None — Gravity V1 Feature Complete & Demo Ready
+- Phase 23 — Demo Hardening & Final Acceptance
 
 ## In progress
 - None
 
 ## Known issues
-- Physical second-phone camera QR scanning and physical device GPS accuracy require physical mobile hardware verification.
+- Physical second-phone camera QR scanning requires physical mobile device verification.
 
 ## Deferred
 - None
@@ -129,14 +116,12 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_gravity
 python manage.py seed_badges
-python manage.py seed_demo --reset
 
 # Setup frontend
 cd frontend
 npm install
-npm run build
+npm run dev
 ```
 
 ## Next recommended task
-MuleHacks 2026 live presentation and judging demonstration.
-
+Begin Phase 23: Demo Hardening & Final Acceptance.

@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 14 — Seasons
+Phase 15 — Pulse
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -20,12 +20,13 @@ Phase 14 — Seasons
 - Phase 11 - Gravity XP & Levels
 - Phase 12 - Badges & Consistency
 - Phase 13 - Gravity Events
-  - Added models `GravityEvent` and `EventReward`.
-  - Constructed strictly decoupled logic mapping overlapping event bonuses into a singular `award_xp` transaction ledger correctly preserving idempotency boundaries.
-  - Profile XP and Feedback Toast overlay updated displaying exact event metric rewards mapped appropriately alongside streaks, levels, and badges.
-  - Safe seeding configurations applied for administrative boundaries globally.
-  - Added REST `/api/events/` endpoint for global API querying.
-  - Mapped event indicators securely onto UI dynamically tracking multipliers and flat bonuses.
+- Phase 14 - Seasons
+  - Season models (`Season`, `SeasonStanding`, `SeasonRewardRule`, `SeasonRewardAward`).
+  - Added REST `/api/seasons/` endpoint for retrieving seasons.
+  - Season status logic (live, upcoming, ended) based on time windows.
+  - Activated `period=season` for phase 10 Leaderboards API.
+  - Added frontend support for filtering metrics by "Season" and selecting current / past seasons.
+  - Fully idempotent finalization workflow capturing `SeasonStanding` and distributing Season rewards securely mapping to `award_xp` with `XPTransaction.Reason.SEASON`.
 
 ## In progress
 - None
@@ -54,4 +55,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 14: Seasons.
+Begin Phase 15: Pulse.

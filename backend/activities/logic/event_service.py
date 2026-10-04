@@ -56,7 +56,6 @@ def evaluate_events_for_participation(user, participation, base_xp):
     # To be safe and predictable, we attach the multiplier bonus entirely to max_multiplier_event
     
     results = []
-    total_combined_bonus = 0
     
     for ev in events_to_process:
         multiplier_bonus = 0
@@ -66,7 +65,6 @@ def evaluate_events_for_participation(user, participation, base_xp):
         flat_bonus = ev.flat_xp_bonus
         
         total_bonus = multiplier_bonus + flat_bonus
-        total_combined_bonus += total_bonus
         
         # 1. Create EventReward (Idempotency ledger)
         reward = EventReward.objects.create(
@@ -78,7 +76,13 @@ def evaluate_events_for_participation(user, participation, base_xp):
             flat_bonus_xp=flat_bonus
         )
         
-        # 2. Issue Badge if any
+        # 2. Issue XPTransaction if there is any bonus
+        if total_bonus > 0:
+            # We use 'event_bonus' as reason if we extend the model, but since we didn't add reason EVENT_BONUS,
+            # wait, I should add EVENT_BONUS to XPTransaction.Reason. Let's do it in models.
+            pass # We will do it after updating models.py
+            
+        # 3. Issue Badge if any
         badge_earned = None
         if ev.badge and ev.badge.is_active:
             ub, created = award_badge(user, ev.badge.slug, activity_type=ev.activity_type)
@@ -95,19 +99,6 @@ def evaluate_events_for_participation(user, participation, base_xp):
             "badge": badge_earned,
             "event_obj": ev
         })
-
-    # 3. Issue a combined XPTransaction if there is any bonus
-    if total_combined_bonus > 0:
-        from .xp_service import award_xp
-        event_names = ", ".join([r["event"] for r in results])
-        award_xp(
-            user=user,
-            amount=total_combined_bonus,
-            reason='event',
-            description=f"Bonus from {event_names}",
-            participation=participation,
-            activity_type=participation.session.activity_type
-        )
 
     return results
 

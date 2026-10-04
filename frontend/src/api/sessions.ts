@@ -56,7 +56,6 @@ export interface LeaveSessionResponse {
   current_level: number;
   streak: { current: number, longest: number } | null;
   badges_earned: { slug: string, name: string, icon: string }[];
-  event_rewards?: { event: string, bonus_xp: number }[];
 }
 
 export const leaveSession = async (sessionId: string): Promise<LeaveSessionResponse> => {

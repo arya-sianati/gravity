@@ -13,8 +13,10 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r'sessions', ActivitySessionViewSet, basename='session')
-from .views import GravityEventViewSet
+
+from .views import GravityEventViewSet, SeasonViewSet
 router.register(r'events', GravityEventViewSet, basename='event')
+router.register(r'seasons', SeasonViewSet, basename='season')
 
 urlpatterns = [
     path('map/live/', LiveMapAPIView.as_view(), name='map-live'),

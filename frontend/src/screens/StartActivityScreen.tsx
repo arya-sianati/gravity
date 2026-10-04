@@ -7,14 +7,10 @@ import { requestCurrentLocation } from '../lib/map/geolocation';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { ActiveActivityScreen } from './ActiveActivityScreen';
 
-import { getLiveEvents } from '../api/client';
-import type { GravityEventData } from '../api/client';
-
 export const StartActivityScreen: React.FC = () => {
   const { activeSession, refreshActiveSession } = useActiveSession();
   
   const [activities, setActivities] = useState<ActivityType[]>([]);
-  const [liveEvents, setLiveEvents] = useState<GravityEventData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,22 +25,21 @@ export const StartActivityScreen: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    const fetchActivitiesAndEvents = async () => {
+    const fetchActivities = async () => {
       try {
         setLoading(true);
-        const [data, events] = await Promise.all([getActivities(), getLiveEvents()]);
+        const data = await getActivities();
         if (mounted) {
           setActivities(data);
-          setLiveEvents(events);
           setError(null);
         }
       } catch (err: any) {
-        if (mounted) setError(err.message || 'Failed to load data');
+        if (mounted) setError(err.message || 'Failed to load activities');
       } finally {
         if (mounted) setLoading(false);
       }
     };
-    fetchActivitiesAndEvents();
+    fetchActivities();
     return () => { mounted = false; };
   }, []);
 
@@ -212,28 +207,17 @@ export const StartActivityScreen: React.FC = () => {
 
       {!loading && !error && !checkingNearby && !showLabelInput && nearbySessions.length === 0 && !selectedActivity && (
         <div className="grid grid-cols-2 gap-4">
-          {activities.map(activity => {
-            const ev = liveEvents.find(e => !e.activity_type_slug || e.activity_type_slug === activity.slug);
-            return (
-              <button
-                key={activity.id}
-                onClick={() => handleSelectActivity(activity)}
-                className="relative bg-gray-800 hover:bg-gray-700 transition-colors rounded-xl p-4 flex flex-col items-center justify-center border border-gray-700 shadow-sm"
-                style={{ borderBottomColor: activity.color, borderBottomWidth: 4 }}
-              >
-                {ev && (
-                  <div className="absolute -top-2 -right-2 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-rose-400 whitespace-nowrap animate-pulse">
-                    {ev.xp_multiplier > 1.0 ? `${ev.xp_multiplier}x XP` : 'Event!'}
-                  </div>
-                )}
-                <div className="text-4xl mb-2">{activity.icon}</div>
-                <span className="text-white font-medium">{activity.name}</span>
-                {ev && (
-                  <span className="text-[10px] text-rose-300 font-bold mt-1 max-w-[100px] truncate">{ev.name}</span>
-                )}
-              </button>
-            );
-          })}
+          {activities.map(activity => (
+            <button
+              key={activity.id}
+              onClick={() => handleSelectActivity(activity)}
+              className="bg-gray-800 hover:bg-gray-700 transition-colors rounded-xl p-4 flex flex-col items-center justify-center border border-gray-700 shadow-sm"
+              style={{ borderBottomColor: activity.color, borderBottomWidth: 4 }}
+            >
+              <div className="text-4xl mb-2">{activity.icon}</div>
+              <span className="text-white font-medium">{activity.name}</span>
+            </button>
+          ))}
         </div>
       )}
     </div>

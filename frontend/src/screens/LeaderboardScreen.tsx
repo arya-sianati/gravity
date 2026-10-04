@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 import { getActivities } from '../api/activities';
 import type { ActivityType } from '../api/activities';
+import { getSeasons } from '../api/seasons';
+import type { Season } from '../api/seasons';
 
 interface LeaderboardRow {
   rank: number;
@@ -27,22 +29,35 @@ interface LeaderboardResponse {
   rows: LeaderboardRow[];
   me: LeaderboardRow | null;
   detail?: string;
+  season?: {
+    name: string;
+    slug: string;
+    status: string;
+    finalized: boolean;
+  };
 }
 
 export const LeaderboardScreen: React.FC = () => {
   const [activities, setActivities] = useState<ActivityType[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<string>('');
   const [period, setPeriod] = useState<'today' | 'week' | 'season' | 'all'>('all');
+  const [selectedSeason, setSelectedSeason] = useState<string>('');
   
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getActivities().then(res => {
-      setActivities(res);
-      if (res.length > 0) {
-        setSelectedActivity(res[0].slug);
+    Promise.all([getActivities(), getSeasons()]).then(([acts, seas]) => {
+      setActivities(acts);
+      if (acts.length > 0) {
+        setSelectedActivity(acts[0].slug);
+      }
+      setSeasons(seas);
+      const activeOrCurrent = seas.find(s => s.status === 'live' || s.status === 'upcoming') || seas[0];
+      if (activeOrCurrent) {
+        setSelectedSeason(activeOrCurrent.slug);
       }
     });
   }, []);
@@ -51,7 +66,13 @@ export const LeaderboardScreen: React.FC = () => {
     if (!selectedActivity) return;
     setLoading(true);
     setError(null);
-    apiClient.get<LeaderboardResponse>(`/api/leaderboards/${selectedActivity}/`, { params: { period } })
+    
+    const params: any = { period };
+    if (period === 'season' && selectedSeason) {
+      params.season = selectedSeason;
+    }
+    
+    apiClient.get<LeaderboardResponse>(`/api/leaderboards/${selectedActivity}/`, { params })
       .then(res => {
         setData(res.data);
         if (res.data.detail) {
@@ -64,16 +85,16 @@ export const LeaderboardScreen: React.FC = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [selectedActivity, period]);
+  }, [selectedActivity, period, selectedSeason]);
 
   return (
     <div className="flex-1 bg-gray-900 flex flex-col items-center p-4">
       <h1 className="text-2xl font-bold text-white mb-6">Leaderboards</h1>
       
       {/* Activity Selector */}
-      <div className="w-full max-w-md mb-4">
+      <div className="w-full max-w-md mb-4 flex gap-2">
         <select 
-          className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg p-3 outline-none"
+          className="flex-1 bg-gray-800 text-white border border-gray-700 rounded-lg p-3 outline-none"
           value={selectedActivity}
           onChange={e => setSelectedActivity(e.target.value)}
         >
@@ -84,7 +105,7 @@ export const LeaderboardScreen: React.FC = () => {
       </div>
 
       {/* Period Selector */}
-      <div className="w-full max-w-md flex bg-gray-800 rounded-lg p-1 mb-6 border border-gray-700">
+      <div className="w-full max-w-md flex bg-gray-800 rounded-lg p-1 mb-4 border border-gray-700">
         {(['today', 'week', 'season', 'all'] as const).map(p => (
           <button
             key={p}
@@ -95,13 +116,33 @@ export const LeaderboardScreen: React.FC = () => {
           </button>
         ))}
       </div>
+      
+      {/* Season Selector */}
+      {period === 'season' && seasons.length > 0 && (
+        <div className="w-full max-w-md mb-6">
+          <select 
+            className="w-full bg-gray-800 text-white border border-gray-700 rounded-lg p-2 text-sm outline-none"
+            value={selectedSeason}
+            onChange={e => setSelectedSeason(e.target.value)}
+          >
+            {seasons.map(s => (
+              <option key={s.id} value={s.slug}>
+                {s.name} {s.status === 'live' ? '(Live)' : s.status === 'ended' ? '(Ended)' : ''} {s.finalized_at ? '(Final)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Leaderboard Content */}
-      <div className="w-full max-w-md bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex-1 flex flex-col">
+      <div className="w-full max-w-md bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex-1 flex flex-col mb-16">
         {loading ? (
           <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : error && !data?.rows?.length ? (
-          <div className="p-8 text-center text-red-400">{error}</div>
+          <div className="p-8 text-center text-red-400">
+            {error}
+            {period === 'season' && <div className="mt-2 text-sm text-gray-500">No active season available.</div>}
+          </div>
         ) : data && data.rows && data.rows.length > 0 ? (
           <>
             <div className="bg-gray-750 p-3 border-b border-gray-700 flex justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
@@ -117,25 +158,13 @@ export const LeaderboardScreen: React.FC = () => {
                     </span>
                     <span className="text-white font-medium">{row.user.display_name}</span>
                   </div>
-                  <span className="text-white font-mono">{Number.isInteger(row.value) ? row.value : Number(row.value).toFixed(2)}</span>
+                  <span className="text-blue-400 font-bold">{row.value}</span>
                 </div>
               ))}
             </div>
-            
-            {data.me && (
-              <div className="bg-blue-900/40 p-4 border-t border-blue-800 flex justify-between items-center mt-auto">
-                <div className="flex items-center gap-4">
-                  <span className="font-bold w-6 text-center text-blue-400">{data.me.rank}</span>
-                  <span className="text-white font-medium">You</span>
-                </div>
-                <span className="text-white font-mono">{Number.isInteger(data.me.value) ? data.me.value : Number(data.me.value).toFixed(2)}</span>
-              </div>
-            )}
           </>
         ) : (
-          <div className="p-8 text-center text-gray-400">
-            No data available for this period.
-          </div>
+          <div className="p-8 text-center text-gray-500">No data available for this period.</div>
         )}
       </div>
     </div>

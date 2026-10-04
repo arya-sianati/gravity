@@ -113,3 +113,29 @@ class EventRewardAdmin(admin.ModelAdmin):
     list_filter = ('event',)
     search_fields = ('user__username', 'event__name')
     readonly_fields = ('user', 'event', 'participation', 'base_xp', 'multiplier_bonus_xp', 'flat_bonus_xp', 'awarded_at')
+
+from .models import Season, SeasonStanding, SeasonRewardRule, SeasonRewardAward
+
+@admin.register(Season)
+class SeasonAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_enabled', 'computed_status', 'starts_at', 'ends_at', 'finalized_at')
+    list_filter = ('is_enabled',)
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('finalized_at',)
+
+@admin.register(SeasonStanding)
+class SeasonStandingAdmin(admin.ModelAdmin):
+    list_display = ('season', 'activity_type', 'user', 'rank', 'value')
+    list_filter = ('season', 'activity_type')
+    readonly_fields = ('season', 'activity_type', 'user', 'rank', 'metric_name', 'value', 'finalized_at')
+
+@admin.register(SeasonRewardRule)
+class SeasonRewardRuleAdmin(admin.ModelAdmin):
+    list_display = ('season', 'activity_type', 'min_rank', 'max_rank', 'xp_bonus', 'badge')
+    list_filter = ('season', 'activity_type')
+
+@admin.register(SeasonRewardAward)
+class SeasonRewardAwardAdmin(admin.ModelAdmin):
+    list_display = ('season', 'user', 'activity_type', 'xp_awarded', 'badge_awarded', 'awarded_at')
+    list_filter = ('season', 'activity_type')
+    readonly_fields = ('season', 'rule', 'user', 'activity_type', 'xp_awarded', 'badge_awarded', 'awarded_at')

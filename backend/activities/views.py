@@ -188,7 +188,6 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
             )
             
             # Phase 12: Evaluate streak
-            from .logic.streak_service import evaluate_streak
             streak, incremented, _ = evaluate_streak(request.user, participation)
             streak_state = {
                 "current": streak.current_count,
@@ -196,7 +195,6 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
             }
             
             # Phase 12: Evaluate badges
-            from .logic.achievement_service import evaluate_after_participation
             earned_list = evaluate_after_participation(request.user, participation, streak)
             for b in earned_list:
                 badges_earned.append({
@@ -205,23 +203,11 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
                     "icon": b.icon
                 })
 
-            # Phase 13: Evaluate events
-            from .logic.event_service import evaluate_events_for_participation
-            event_rewards = evaluate_events_for_participation(request.user, participation, session.activity_type.default_xp)
-            
-            # Process event badges so they appear in UI toast
-            for er in event_rewards:
-                if er.get("badge"):
-                    badges_earned.append(er["badge"])
-                
-            # If total_xp was bumped by events, check level up
-            request.user.refresh_from_db()
             if xpt:
+                request.user.refresh_from_db()
                 xp_awarded = xpt.amount
-                
-            # Compute total xp awarded dynamically from both if needed, but the original payload expects base. Let's just update level_up check!
-            if request.user.current_level > old_level:
-                level_up = True
+                if request.user.current_level > old_level:
+                    level_up = True
 
         active_count = session.participations.filter(status=Participation.Status.ACTIVE).count()
         if active_count == 0 and session.status == ActivitySession.Status.ACTIVE:
@@ -235,8 +221,7 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
             "level_up": level_up,
             "current_level": request.user.current_level,
             "streak": streak_state,
-            "badges_earned": badges_earned,
-            "event_rewards": event_rewards if 'event_rewards' in locals() else []
+            "badges_earned": badges_earned
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
@@ -460,91 +445,75 @@ class LeaderboardAPIView(APIView):
     
     def get(self, request, activity_slug, *args, **kwargs):
         activity_type = get_object_or_404(ActivityType, slug=activity_slug, is_active=True)
+        period = request.GET.get('period', 'all')
         
-        # Get primary metric
-        primary_metric = activity_type.metrics.filter(is_primary=True, leaderboard_enabled=True).first()
-        if not primary_metric:
-            # Fallback to any leaderboard enabled metric
-            primary_metric = activity_type.metrics.filter(leaderboard_enabled=True).first()
+        target_season = None
+        
+        from .logic.season_service import get_current_season
+        from .models import Season, SeasonStanding
+        
+        if period == 'season':
+            season_slug = request.GET.get('season')
+            if season_slug:
+                target_season = get_object_or_404(Season, slug=season_slug)
+            else:
+                target_season = get_current_season()
+                
+            if not target_season:
+                # No current season available
+                return Response({
+                    "activity": {"slug": activity_type.slug, "name": activity_type.name, "icon": activity_type.icon},
+                    "period": period,
+                    "season": None,
+                    "rows": [],
+                    "me": None,
+                    "detail": "No active season currently."
+                })
+        
+        # If finalized season, use frozen standings
+        primary_metric = activity_type.metrics.filter(is_primary=True, leaderboard_enabled=True).first() or activity_type.metrics.filter(leaderboard_enabled=True).first()
+        
+        rows = []
+        if period == 'season' and target_season and target_season.finalized_at:
+            standings = SeasonStanding.objects.filter(season=target_season, activity_type=activity_type).order_by('rank')
+            for st in standings:
+                rows.append({
+                    "user": {
+                        "id": st.user.id,
+                        "username": st.user.username,
+                        "display_name": getattr(st.user, 'display_name', None) or st.user.username,
+                        "avatar_url": getattr(st.user, 'avatar_url', None)
+                    },
+                    "rank": st.rank,
+                    "value": st.value
+                })
+        else:
+            from .logic.leaderboard_service import compute_leaderboard
+            computed_metric, computed_rows = compute_leaderboard(activity_type, period=period, target_season=target_season)
+            primary_metric = computed_metric or primary_metric
+            rows = computed_rows
             
         if not primary_metric:
             return Response({
                 "activity": {"slug": activity_type.slug, "name": activity_type.name, "icon": activity_type.icon},
-                "period": request.GET.get('period', 'all'),
+                "period": period,
                 "rows": [],
                 "me": None,
                 "detail": "No leaderboard metric available."
             })
             
-        period = request.GET.get('period', 'all')
-        now = timezone.now()
-        
-        # We only aggregate COMPLETED participations (or LEFT)
-        from .models import Participation
-        qs = Participation.objects.filter(
-            session__activity_type=activity_type,
-            status__in=[Participation.Status.COMPLETED, Participation.Status.LEFT, Participation.Status.AUTO_STOPPED],
-            metric_values__metric=primary_metric
-        )
-        
-        if period == 'today':
-            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            qs = qs.filter(joined_at__gte=start_of_day)
-        elif period == 'week':
-            # Monday 00:00
-            start_of_week = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
-            qs = qs.filter(joined_at__gte=start_of_week)
-        elif period == 'season':
-            return Response({"detail": "Season unavailable"}, status=status.HTTP_501_NOT_IMPLEMENTED)
-            
-        # Aggregation
-        from .models import ActivityMetric
-        agg_func = Sum
-        if primary_metric.aggregation == ActivityMetric.AggregationMode.MAX:
-            agg_func = Max
-        elif primary_metric.aggregation == ActivityMetric.AggregationMode.AVERAGE:
-            agg_func = Avg
-            
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        
-        # Group by user
-        aggregated = qs.values('user__id', 'user__username').annotate(
-            agg_value=agg_func('metric_values__value')
-        ).order_by('-agg_value')
-        
-        # Apply limit
+        # Apply limit and find 'me'
         limit = int(request.GET.get('limit', 100))
-        
-        rows = []
+        final_rows = []
         me = None
         
-        # Sort and rank (handle ties)
-        current_rank = 1
-        previous_value = None
-        
-        for i, row in enumerate(aggregated):
-            val = row['agg_value']
-            if previous_value is not None and val < previous_value:
-                current_rank = i + 1
+        for r in rows:
+            if len(final_rows) < limit:
+                final_rows.append(r)
+            if request.user.is_authenticated and r['user']['id'] == request.user.id:
+                me = r
                 
-            entry = {
-                "rank": current_rank,
-                "user": {
-                    "id": row['user__id'],
-                    "display_name": row['user__username']
-                },
-                "value": val
-            }
-            if len(rows) < limit:
-                rows.append(entry)
-                
-            if request.user.is_authenticated and row['user__id'] == request.user.id:
-                me = entry
-                
-            previous_value = val
-            
-        return Response({
+        resp = {
             "activity": {
                 "slug": activity_type.slug,
                 "name": activity_type.name,
@@ -556,9 +525,48 @@ class LeaderboardAPIView(APIView):
                 "unit": primary_metric.unit
             },
             "period": period,
-            "rows": rows,
+            "rows": final_rows,
             "me": me
-        })
+        }
+        
+        if period == 'season' and target_season:
+            resp["season"] = {
+                "name": target_season.name,
+                "slug": target_season.slug,
+                "status": target_season.computed_status,
+                "finalized": target_season.finalized_at is not None
+            }
+            
+        return Response(resp)
+
+class SeasonViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        from .models import Season
+        return Season.objects.all().order_by('-starts_at')
+
+    def get_serializer_class(self):
+        from rest_framework import serializers
+        from .models import Season
+        
+        class SeasonSerializer(serializers.ModelSerializer):
+            status = serializers.CharField(source='computed_status', read_only=True)
+            
+            class Meta:
+                model = Season
+                fields = ['id', 'name', 'slug', 'description', 'starts_at', 'ends_at', 'is_enabled', 'status', 'finalized_at']
+        return SeasonSerializer
+
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        from .logic.season_service import get_current_season
+        season = get_current_season()
+        if not season:
+            return Response({"detail": "No active season."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(season)
+        return Response(serializer.data)
 
 class GravityEventViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]

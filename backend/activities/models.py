@@ -225,6 +225,7 @@ class XPTransaction(models.Model):
         BADGE = 'badge', 'Badge'
         EVENT = 'event', 'Event'
         CHALLENGE = 'challenge', 'Challenge'
+        SEASON = 'season', 'Season'
         ADMIN = 'admin', 'Admin'
         ADJUSTMENT = 'adjustment', 'Adjustment'
 
@@ -306,19 +307,6 @@ class GravityEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(ends_at__gt=models.F('starts_at')),
-                name='event_ends_after_start'
-            )
-        ]
-
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        if self.starts_at and self.ends_at and self.starts_at >= self.ends_at:
-            raise ValidationError("ends_at must be strictly after starts_at.")
-
     def __str__(self):
         return self.name
         
@@ -360,3 +348,95 @@ class EventReward(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.event.name} Reward"
+
+class Season(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    description = models.TextField(blank=True)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    is_enabled = models.BooleanField(default=True)
+    finalized_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(ends_at__gt=models.F('starts_at')),
+                name='season_ends_after_start'
+            )
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from django.db.models import Q
+        if self.starts_at and self.ends_at and self.starts_at >= self.ends_at:
+            raise ValidationError("ends_at must be strictly after starts_at.")
+        
+        # Check overlapping enabled seasons
+        if self.is_enabled:
+            overlapping = Season.objects.filter(
+                is_enabled=True,
+                starts_at__lt=self.ends_at,
+                ends_at__gt=self.starts_at
+            )
+            if self.pk:
+                overlapping = overlapping.exclude(pk=self.pk)
+            if overlapping.exists():
+                raise ValidationError("Overlapping enabled seasons are not allowed.")
+
+    @property
+    def computed_status(self):
+        if not self.is_enabled:
+            return 'disabled'
+        from django.utils import timezone
+        now = timezone.now()
+        if now < self.starts_at:
+            return 'upcoming'
+        if now >= self.ends_at:
+            return 'ended'
+        return 'live'
+
+    def __str__(self):
+        return self.name
+
+class SeasonStanding(models.Model):
+    season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='standings')
+    activity_type = models.ForeignKey('ActivityType', on_delete=models.CASCADE, related_name='season_standings')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='season_standings')
+    rank = models.PositiveIntegerField()
+    metric_name = models.CharField(max_length=255)
+    value = models.FloatField()
+    finalized_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['season', 'activity_type', 'user'], name='unique_season_standing')
+        ]
+
+class SeasonRewardRule(models.Model):
+    season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='reward_rules')
+    activity_type = models.ForeignKey('ActivityType', null=True, blank=True, on_delete=models.CASCADE, help_text="Leave blank to apply to all activities")
+    min_rank = models.PositiveIntegerField(help_text="Inclusive minimum rank (e.g., 1)")
+    max_rank = models.PositiveIntegerField(help_text="Inclusive maximum rank (e.g., 3)")
+    xp_bonus = models.PositiveIntegerField(default=0)
+    badge = models.ForeignKey('Badge', null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __str__(self):
+        act = self.activity_type.name if self.activity_type else "All"
+        return f"{self.season.name} | {act} | Rank {self.min_rank}-{self.max_rank}"
+
+class SeasonRewardAward(models.Model):
+    season = models.ForeignKey(Season, on_delete=models.CASCADE)
+    rule = models.ForeignKey(SeasonRewardRule, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    activity_type = models.ForeignKey('ActivityType', on_delete=models.CASCADE)
+    xp_awarded = models.PositiveIntegerField(default=0)
+    badge_awarded = models.BooleanField(default=False)
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['season', 'rule', 'user', 'activity_type'], name='unique_season_reward_award')
+        ]

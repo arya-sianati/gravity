@@ -1,8 +1,42 @@
-# Gravity — Self-Hosted Deployment Plan
+# Gravity — Production Deployment & Operations Guide
 
-Target: user's own Linux server + own domain.
+Canonical Production URL: `https://gravity.college`  
+Alternative Hostname: `https://www.gravity.college` (301 Permanent Redirect to canonical apex)
 
-This document assumes Ubuntu/Debian-like Linux, but commands should be adapted to the actual server.
+---
+
+## Live Production Architecture & Service Layout
+
+| Component | Technology | Binding / Path | Service / Unit |
+| :--- | :--- | :--- | :--- |
+| **Reverse Proxy / TLS** | Nginx 1.22 | `0.0.0.0:80`, `0.0.0.0:443` | `nginx.service` |
+| **ASGI Application** | Daphne + Django 5.2 | `127.0.0.1:8000` | `gravity.service` |
+| **Frontend PWA** | React 19 + Vite | `/home/mule/gravity/frontend/dist` | Served by Nginx |
+| **Static Assets** | Django Staticfiles | `/home/mule/gravity/backend/staticfiles` | Served by Nginx (`/static/`) |
+| **Database** | PostgreSQL 15 + PostGIS 3.3 | `127.0.0.1:5432/gravity` | `postgresql.service` |
+| **Channel Layer** | Redis 7 | `127.0.0.1:6379/0` | `redis-server.service` |
+| **TLS Certificates** | Let's Encrypt / Certbot | `/etc/letsencrypt/live/gravity.college/` | `certbot.timer` |
+
+### Key Paths & Configuration Files
+- Nginx Site Config: `/etc/nginx/sites-available/gravity.college` (source copy in `deploy/nginx-gravity.conf`)
+- Daphne Systemd Unit: `/etc/systemd/system/gravity.service` (source copy in `deploy/gravity.service`)
+- Backend Environment File: `/home/mule/gravity/backend/.env` (mode `0600`, outside Git)
+- Automated Redeployment Script: `/home/mule/gravity/scripts/deploy.sh`
+
+### Service Management Commands
+```bash
+# Check service statuses
+systemctl status nginx gravity postgresql redis-server --no-pager
+
+# Restart application service
+sudo systemctl restart gravity.service
+
+# Reload web server
+sudo systemctl reload nginx
+
+# Quick redeployment
+/home/mule/gravity/scripts/deploy.sh
+```
 
 ---
 

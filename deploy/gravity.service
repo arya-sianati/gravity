@@ -1,0 +1,17 @@
+[Unit]
+Description=Gravity Daphne ASGI Service
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=mule
+Group=mule
+WorkingDirectory=/home/mule/gravity/backend
+EnvironmentFile=/home/mule/gravity/backend/.env
+ExecStart=/home/mule/gravity/backend/venv/bin/daphne -b 127.0.0.1 -p 8000 --proxy-headers config.asgi:application
+Restart=on-failure
+RestartSec=3s
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 21 — PWA / Mobile Polish (Complete)
+Phase 22 — Production Deployment (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -81,15 +81,27 @@ Phase 21 — PWA / Mobile Polish (Complete)
   - Route-level lazy loading (`React.lazy` + `Suspense`), reducing the initial application bundle from 1.48MB to 265kB.
   - Touch targets and mobile form handling: `inputMode="numeric"`/`"decimal"`, responsive QR code scaling, and "Copy Join Link" clipboard action.
   - Standardized location UX with user-friendly error formatting and educational privacy copy.
+- Phase 22 - Production Deployment
+  - Canonical domain `https://gravity.college` deployed with 301 permanent redirect from `https://www.gravity.college` preserving paths and query strings.
+  - Port 80 HTTP-to-HTTPS redirect for all traffic.
+  - Production TLS provisioned via Let's Encrypt / Certbot (`gravity.college` + `www.gravity.college`) with automated background renewal timer (`certbot.timer`).
+  - Production Nginx reverse proxy routing: React PWA (`/`), Django REST API (`/api/`), Django Admin (`/admin/`), Django static assets (`/static/`), and WebSockets (`/ws/`).
+  - ASGI application daemonized via systemd (`gravity.service`) running Daphne on localhost port 8000 with restart-on-failure and automated boot enablement.
+  - Verified server restart-persistence: PostgreSQL 15, Redis 7, Nginx 1.22, and Daphne ASGI (`gravity.service`) all automatically resumed after unexpected server reboot.
+  - Database role security maintained: `gravity_user` operates under least privilege without PostgreSQL SUPERUSER role.
+  - Secure production environment (`backend/.env`, mode `0600`) with strong random `SECRET_KEY`, `DEBUG=False`, `PUBLIC_BASE_URL=https://gravity.college`, `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`, `X-Frame-Options=DENY`, and `nosniff`.
+  - Production WebSocket handshake verified over TLS (`wss://gravity.college/ws/gravity/`) with `AllowedHostsOriginValidator` and Redis channel layer.
+  - Comprehensive two-client smoke test passing across session creation, QR join URL generation (`https://gravity.college/join/<token>`), unauthenticated preview, QR join, real-time participant updates, heartbeat tracking, and session leaves.
+  - Automated deployment helper script created at `scripts/deploy.sh` and full operations guide documented in `docs/GRAVITY_DEPLOYMENT.md`.
 
 ## Next phase
-- Phase 22 — Production Deployment & Demo Hardening
+- Phase 23 — Demo Hardening & Final Acceptance
 
 ## In progress
 - None
 
 ## Known issues
-- Phone-camera QR testing recorded as pending for deployment/demo hardening.
+- Physical second-phone camera QR scanning requires physical mobile device verification.
 
 ## Deferred
 - None
@@ -112,4 +124,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 22: Production Deployment & Demo Hardening.
+Begin Phase 23: Demo Hardening & Final Acceptance.

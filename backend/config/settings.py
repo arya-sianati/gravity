@@ -19,7 +19,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Setup environ
 env = environ.Env(DEBUG=(bool, False))
-environ.Env.read_env(BASE_DIR / '../.env')
+if (BASE_DIR / '.env').exists():
+    environ.Env.read_env(BASE_DIR / '.env')
+elif (BASE_DIR.parent / '.env').exists():
+    environ.Env.read_env(BASE_DIR.parent / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -129,7 +132,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -147,11 +151,19 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Production SSL & Reverse Proxy Handling
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+PUBLIC_BASE_URL = env('PUBLIC_BASE_URL', default='https://gravity.college')
+
 # Session & CSRF configuration
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = env.bool('DJANGO_SESSION_COOKIE_SECURE', default=not DEBUG)
+CSRF_COOKIE_SECURE = env.bool('DJANGO_CSRF_COOKIE_SECURE', default=not DEBUG)
 
 CSRF_TRUSTED_ORIGINS = env.list(
     'DJANGO_CSRF_TRUSTED_ORIGINS',

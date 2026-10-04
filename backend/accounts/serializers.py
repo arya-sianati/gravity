@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User
+from .models import User, Friendship
 
 class UserSerializer(serializers.ModelSerializer):
     level_start_xp = serializers.SerializerMethodField()
@@ -111,3 +111,44 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['display_name', 'email', 'location_privacy_mode']
+
+
+class PublicUserSerializer(serializers.ModelSerializer):
+    friendship_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'display_name',
+            'current_level',
+            'friendship_status',
+        ]
+
+    def get_friendship_status(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return 'none'
+        from accounts.logic.friend_service import get_friendship_status_between
+        return get_friendship_status_between(request.user, obj)
+
+
+class FriendshipRequestSerializer(serializers.ModelSerializer):
+    initiator = PublicUserSerializer(source='initiated_by', read_only=True)
+    recipient = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Friendship
+        fields = [
+            'id',
+            'status',
+            'initiator',
+            'recipient',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_recipient(self, obj):
+        recipient = obj.user_b if obj.user_a_id == obj.initiated_by_id else obj.user_a
+        return PublicUserSerializer(recipient, context=self.context).data

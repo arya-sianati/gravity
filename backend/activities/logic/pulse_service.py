@@ -49,14 +49,29 @@ def compute_pulse_score(distance_m: float, participant_count: int, started_at: d
     return round(max(0.0, min(1.0, composite)), 4)
 
 
-def format_privacy_safe_distance(distance_m: float, privacy_mode: str, is_owner: bool = False) -> str:
+from activities.logic.privacy_service import resolve_location_visibility, Visibility
+
+def format_privacy_safe_distance(distance_m: float, privacy_mode: str = None, is_owner: bool = False, visibility: str = None) -> str:
     """
     Formats distance for public serialization without leaking exact coordinates.
-    For Blurred and Friends modes (for non-owners), uses coarse bucketed representations.
+    For Blurred modes, uses coarse bucketed representations.
+    For Exact visibility, returns 0.1 mi precision.
     """
+    if visibility is None:
+        if is_owner or privacy_mode == 'exact':
+            visibility = Visibility.EXACT
+        else:
+            visibility = Visibility.BLURRED
+
     dist_mi = distance_m * METERS_TO_MILES
 
-    if (privacy_mode in ['blurred', 'friends']) and not is_owner:
+    if visibility == Visibility.EXACT:
+        if dist_mi < 0.1:
+            return "<0.1 mi"
+        else:
+            return f"~{dist_mi:.1f} mi"
+    else:
+        # Coarse buckets
         if distance_m < 400:
             return "Nearby"
         elif distance_m < 800:
@@ -64,15 +79,8 @@ def format_privacy_safe_distance(distance_m: float, privacy_mode: str, is_owner:
         elif distance_m < 1600:
             return "~1 mi"
         else:
-            # Round to nearest 0.5 mile
             rounded = round(dist_mi * 2.0) / 2.0
             return f"~{rounded:.1f} mi"
-    else:
-        # Exact mode or owner viewing their own session
-        if dist_mi < 0.1:
-            return "<0.1 mi"
-        else:
-            return f"~{dist_mi:.1f} mi"
 
 
 def get_pulse_now(user, lat: float, lng: float, radius_m: float = None, activity_slug: str = None, limit: int = 20) -> dict:
@@ -143,8 +151,9 @@ def get_pulse_now(user, lat: float, lng: float, radius_m: float = None, activity
 
     items = []
     for session in qs:
-        is_owner = (user and user.is_authenticated and session.created_by_id == user.id)
-        privacy_mode = getattr(session.created_by, 'location_privacy_mode', 'blurred')
+        visibility = resolve_location_visibility(session.created_by, user)
+        if visibility == Visibility.HIDDEN:
+            continue
 
         raw_dist = session.distance_geo.m if hasattr(session, 'distance_geo') and session.distance_geo else 0.0
         active_count = session.active_participant_count
@@ -160,8 +169,7 @@ def get_pulse_now(user, lat: float, lng: float, radius_m: float = None, activity
 
         dist_display = format_privacy_safe_distance(
             distance_m=raw_dist,
-            privacy_mode=privacy_mode,
-            is_owner=is_owner
+            visibility=visibility
         )
 
         # Match live event

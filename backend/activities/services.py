@@ -1,42 +1,19 @@
 from django.contrib.gis.geos import Point
 from .models import Participation
-
-def generalize_location(point: Point) -> Point:
-    # Deterministic grid snapping for privacy
-    # ~500m grid cell size = 0.005 degrees roughly
-    cell_size = 0.005
-    lat = round(point.y / cell_size) * cell_size
-    lng = round(point.x / cell_size) * cell_size
-    return Point(lng, lat, srid=4326)
+from .logic.privacy_service import resolve_location_visibility, generalize_location, Visibility
 
 def get_privacy_safe_feature(session, request_user=None):
     """
-    Returns a GeoJSON Feature dict for the given session, applying privacy rules.
+    Returns a GeoJSON Feature dict for the given session, applying central privacy rules.
     Returns None if the session should be completely hidden.
     """
-    owner = session.created_by
-    privacy = owner.location_privacy_mode
-    
-    is_owner = (request_user == owner)
-    
-    # 1. Hidden
-    if privacy == 'hidden' and not is_owner:
+    visibility = resolve_location_visibility(session.created_by, request_user)
+    if visibility == Visibility.HIDDEN:
         return None
-        
-    # 2. Coordinate Resolution
-    location = session.location
-    if not is_owner:
-        if privacy == 'blurred':
-            location = generalize_location(session.location)
-        elif privacy == 'friends':
-            # Phase 07: Friends not fully implemented. Default to blurred.
-            # When friends are implemented, check Friendship table here.
-            location = generalize_location(session.location)
-        elif privacy == 'exact':
-            location = session.location
-        elif privacy == 'hidden':
-            # Covered above, but just in case
-            return None
+    elif visibility == Visibility.EXACT:
+        location = session.location
+    else: # BLURRED
+        location = generalize_location(session.location)
 
     # Calculate weight
     # active_count * ActivityType.heat_weight_multiplier

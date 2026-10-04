@@ -9,6 +9,7 @@ export const ProfileScreen: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [saving, setSaving] = useState(false);
+  const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   
   const [history, setHistory] = useState<XPTransaction[]>([]);
@@ -41,6 +42,20 @@ export const ProfileScreen: React.FC = () => {
       setSaveMessage('Failed to update profile.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePrivacyChange = async (mode: 'hidden' | 'blurred' | 'friends' | 'exact') => {
+    if (mode === user.location_privacy_mode || updatingPrivacy) return;
+    try {
+      setUpdatingPrivacy(true);
+      await updateProfile({ location_privacy_mode: mode });
+      setSaveMessage(`Location privacy updated to ${getPrivacyLabel(mode)}`);
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch {
+      setSaveMessage('Failed to update privacy settings.');
+    } finally {
+      setUpdatingPrivacy(false);
     }
   };
 
@@ -217,17 +232,92 @@ export const ProfileScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Privacy Mode Info */}
-      <div className="mt-6 p-4 bg-gray-900/40 rounded-xl border border-gray-800/60">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-300">Location Privacy</span>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-950/60 text-indigo-300 border border-indigo-800/50">
-            {getPrivacyLabel(user.location_privacy_mode)}
-          </span>
+      {/* Location Privacy Settings */}
+      <div className="mt-6 p-4 bg-gray-900/60 rounded-2xl border border-gray-800/80">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider">
+              Location Privacy Mode
+            </h3>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Controls coordinate precision and visibility across Map, Pulse, and Friends.
+            </p>
+          </div>
+          {updatingPrivacy && (
+            <span className="text-xs text-indigo-400 animate-pulse font-mono">Saving...</span>
+          )}
         </div>
-        <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
-          Full privacy configuration controls will unlock in Phase 16.
-        </p>
+
+        <div className="space-y-2.5 mt-3">
+          {([
+            {
+              mode: 'blurred' as const,
+              label: 'Blurred / Approximate',
+              badge: 'Recommended',
+              description: 'Snaps coordinates to ~500m grid cells. Others only see generalized areas and coarse distance estimates.',
+              icon: '🌫️',
+            },
+            {
+              mode: 'friends' as const,
+              label: 'Friends Only',
+              description: 'Accepted friends see your exact coordinates and live distance. Strangers see blurred approximate locations.',
+              icon: '👥',
+            },
+            {
+              mode: 'hidden' as const,
+              label: 'Hidden / Ghost',
+              description: 'Completely hidden on Map, Pulse, and Friends Presence. Only you can see your own active session.',
+              icon: '👻',
+            },
+            {
+              mode: 'exact' as const,
+              label: 'Exact / Public',
+              description: 'Precise coordinates and accurate distances are visible to all users on the map and discovery feeds.',
+              icon: '📍',
+            },
+          ]).map((opt) => {
+            const isSelected = user.location_privacy_mode === opt.mode;
+            return (
+              <div
+                key={opt.mode}
+                onClick={() => handlePrivacyChange(opt.mode)}
+                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start space-x-3 ${
+                  isSelected
+                    ? 'bg-indigo-950/40 border-indigo-600/80 shadow-md shadow-indigo-950/50'
+                    : 'bg-gray-900/40 border-gray-800/60 hover:bg-gray-800/40 hover:border-gray-700/60'
+                }`}
+              >
+                <div className="text-xl mt-0.5">{opt.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-xs font-bold ${isSelected ? 'text-indigo-200' : 'text-gray-200'}`}>
+                      {opt.label}
+                    </span>
+                    {opt.badge && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-600/50 text-indigo-200 font-semibold uppercase tracking-wider">
+                        {opt.badge}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
+                    {opt.description}
+                  </p>
+                </div>
+                <div className="mt-1">
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-600'
+                        : 'border-gray-600 bg-gray-800'
+                    }`}
+                  >
+                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Membership Info */}

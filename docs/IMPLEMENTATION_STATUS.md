@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 16 — Friends & Presence (Next)
+Phase 16 — Friends & Privacy (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -21,21 +21,17 @@ Phase 16 — Friends & Presence (Next)
 - Phase 12 - Badges & Consistency
 - Phase 13 - Gravity Events
 - Phase 14 - Seasons
-  - Season models (`Season`, `SeasonStanding`, `SeasonRewardRule`, `SeasonRewardAward`).
-  - Added REST `/api/seasons/` endpoint for retrieving seasons.
-  - Season status logic (live, upcoming, ended) based on time windows.
-  - Activated `period=season` for phase 10 Leaderboards API.
-  - Added frontend support for filtering metrics by "Season" and selecting current / past seasons.
-  - Fully idempotent finalization workflow capturing `SeasonStanding` and distributing Season rewards securely mapping to `award_xp` with `XPTransaction.Reason.SEASON`.
 - Phase 15 - Pulse Now
-  - Endpoint `GET /api/pulse/now/?lat=...&lng=...&radius=...&activity=...&limit=...` with PostGIS spatial query and active participant counting.
-  - Explainable, bounded, deterministic Pulse score (`pulse_service.py`) combining distance decay, participant strength, and recency decay.
-  - Deterministic secondary tie-breaker ordering (`pulse_score DESC`, `participants DESC`, `distance ASC`, `started_at DESC`, `session_id ASC`).
-  - Reused Phase 07 privacy architecture: hidden sessions omitted for non-owners, friends-only fallback safe, blurred sessions use coarse/rounded distance representations, raw exact coordinates omitted from payload.
-  - Single lifecycle join integration: `POST /api/sessions/<id>/join/` with `source='pulse'` automatically records `join_method='suggestion'`.
-  - Frontend `PulseScreen.tsx` with dynamic activity filter chips, realtime WebSocket updates on `map_changed`, visibilitychange / reconnection refetch, empty/locating/error states, and direct navigation to Map.
-  - Dynamic Activity acceptance tested with Pickleball and 'Other' custom labels.
-  - Comprehensive test suite added in `tests_phase15.py` (24 dedicated tests; 106 tests total across repository).
+- Phase 16 - Friends & Privacy
+  - Canonical `Friendship` model with database-level ordering (`user_a.id < user_b.id`), pair uniqueness, and self-friending check constraints.
+  - Authoritative, unified privacy resolver `resolve_location_visibility` governing Map (GeoJSON coordinates), Pulse (session inclusion and distance format), Session Detail, and Friends Presence.
+  - Safe User Search endpoint `GET /api/users/search/?q=...` returning only public safe fields (id, username, display_name, current_level, friendship_status), strictly omitting email, coordinates, or passwords, and excluding the requesting user.
+  - Public Profile endpoint `GET /api/users/<id>/profile/` with badges, streak, friendship status, and privacy-governed active session context.
+  - Friend request lifecycle (`/api/friends/request/`, incoming, outgoing, accept, decline, cancel, remove) with automatic reciprocal acceptance and idempotent request handling.
+  - Friends list and Live Presence endpoint `GET /api/friends/presence/` surfacing active friend sessions with privacy-safe coarse or exact distance presentation.
+  - Interactive Location Privacy Settings selector in `ProfileScreen.tsx` with live `PATCH /api/me/` updates supporting Hidden, Blurred (~500m grid default), Friends Only, and Exact modes.
+  - Frontend `FriendsScreen.tsx` featuring a 3-tab layout (`Friends` with live presence feed and roster, `Requests` with incoming/outgoing actions, `Find Friends` with real-time search), and a user profile inspection modal.
+  - Dedicated automated test suite in `accounts/tests_phase16.py` (14 comprehensive tests; 120 tests passing repository-wide).
 
 ## In progress
 - None
@@ -44,7 +40,7 @@ Phase 16 — Friends & Presence (Next)
 - Phone-camera QR testing recorded as pending for deployment/demo hardening.
 
 ## Deferred
-- Full privacy settings UI remains deferred to P1 / Phase 16 as approved.
+- None
 
 ## Setup / migration commands
 ```bash
@@ -64,4 +60,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 16: Friends & Presence.
+Begin Phase 17: Challenges.

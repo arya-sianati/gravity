@@ -440,3 +440,99 @@ class SeasonRewardAward(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['season', 'rule', 'user', 'activity_type'], name='unique_season_reward_award')
         ]
+
+
+# =============================================================================
+# Phase 17: Friend Challenges
+# =============================================================================
+
+class FriendChallenge(models.Model):
+    class ChallengeType(models.TextChoices):
+        FIRST_TO_TARGET = 'first_to_target', 'First to Target'
+        HIGHEST_BY_DEADLINE = 'highest_by_deadline', 'Highest Metric by Deadline'
+        COOPERATIVE_TARGET = 'cooperative_target', 'Cooperative Combined Target'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ACTIVE = 'active', 'Active'
+        COMPLETED = 'completed', 'Completed'
+        CANCELLED = 'cancelled', 'Cancelled'
+        EXPIRED = 'expired', 'Expired'
+
+    title = models.CharField(max_length=150, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_challenges')
+    activity_type = models.ForeignKey(ActivityType, on_delete=models.CASCADE, related_name='challenges')
+    metric = models.ForeignKey(ActivityMetric, on_delete=models.CASCADE, related_name='challenges')
+    challenge_type = models.CharField(max_length=30, choices=ChallengeType.choices)
+    target_value = models.FloatField(null=True, blank=True)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='won_challenges')
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title or f"{self.activity_type.name} Challenge ({self.challenge_type})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.starts_at and self.ends_at and self.starts_at >= self.ends_at:
+            raise ValidationError({'ends_at': 'ends_at must be strictly after starts_at.'})
+        if self.metric_id and self.activity_type_id and self.metric.activity_type_id != self.activity_type_id:
+            raise ValidationError({'metric': 'Metric does not belong to the selected activity type.'})
+        if self.challenge_type in [self.ChallengeType.FIRST_TO_TARGET, self.ChallengeType.COOPERATIVE_TARGET]:
+            if self.target_value is None or self.target_value <= 0:
+                raise ValidationError({'target_value': 'target_value must be greater than 0 for this challenge type.'})
+
+
+class ChallengeParticipant(models.Model):
+    class InvitationStatus(models.TextChoices):
+        INVITED = 'invited', 'Invited'
+        ACCEPTED = 'accepted', 'Accepted'
+        DECLINED = 'declined', 'Declined'
+
+    challenge = models.ForeignKey(FriendChallenge, on_delete=models.CASCADE, related_name='participants')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='challenge_participations')
+    invitation_status = models.CharField(max_length=20, choices=InvitationStatus.choices, default=InvitationStatus.INVITED)
+    joined_at = models.DateTimeField(null=True, blank=True)
+    progress = models.FloatField(default=0.0)
+    is_winner = models.BooleanField(default=False)
+    rank = models.PositiveIntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['challenge', 'user'], name='unique_challenge_participant')
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} in {self.challenge}"
+
+
+class ChallengeReward(models.Model):
+    class RewardType(models.TextChoices):
+        COMPLETION = 'completion', 'Completion XP'
+        WINNER = 'winner', 'Winner XP'
+
+    challenge = models.ForeignKey(FriendChallenge, on_delete=models.CASCADE, related_name='rewards')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='challenge_rewards')
+    reward_type = models.CharField(max_length=20, choices=RewardType.choices)
+    amount = models.PositiveIntegerField()
+    xp_transaction = models.ForeignKey(XPTransaction, null=True, blank=True, on_delete=models.SET_NULL)
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['challenge', 'user', 'reward_type'], name='unique_challenge_reward')
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} {self.reward_type} reward ({self.amount} XP)"

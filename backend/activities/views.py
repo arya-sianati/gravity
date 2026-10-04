@@ -674,3 +674,175 @@ class PulseNowAPIView(APIView):
             return Response(data, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+from django.core.exceptions import ValidationError as DjangoValidationError, PermissionDenied as DjangoPermissionDenied
+from django.shortcuts import get_object_or_404
+from .models import FriendChallenge, ChallengeParticipant, ActivityMetric, ActivityType
+from .serializers import FriendChallengeSerializer, ChallengeCreateSerializer
+from .logic.challenge_service import (
+    create_challenge,
+    accept_challenge_invitation,
+    decline_challenge_invitation,
+    cancel_challenge,
+    calculate_and_update_challenge_progress,
+)
+
+class FriendChallengeListCreateAPIView(APIView):
+    """
+    List user's challenges or create a new friend challenge.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = FriendChallenge.objects.filter(
+            participants__user=request.user
+        ).select_related('activity_type', 'metric', 'created_by', 'winner').distinct()
+
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        # Update progress before serialization
+        challenge_list = list(qs.order_by('-created_at'))
+        for ch in challenge_list:
+            if ch.status in [FriendChallenge.Status.ACTIVE, FriendChallenge.Status.PENDING]:
+                calculate_and_update_challenge_progress(ch)
+
+        serializer = FriendChallengeSerializer(challenge_list, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = ChallengeCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        # Resolve activity type
+        act_slug = data.get('activity_type_slug') or data.get('activity_type')
+        if not act_slug:
+            return Response({"detail": "activity_type or activity_type_slug is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            if str(act_slug).isdigit():
+                activity_type = ActivityType.objects.get(id=int(act_slug), is_active=True)
+            else:
+                activity_type = ActivityType.objects.get(slug=act_slug, is_active=True)
+        except ActivityType.DoesNotExist:
+            return Response({"detail": "Activity type not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Resolve metric
+        metric_slug = data.get('metric_slug') or data.get('metric')
+        if not metric_slug:
+            return Response({"detail": "metric or metric_slug is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if str(metric_slug).isdigit():
+                metric = ActivityMetric.objects.get(id=int(metric_slug), activity_type=activity_type)
+            else:
+                metric = ActivityMetric.objects.get(slug=metric_slug, activity_type=activity_type)
+        except ActivityMetric.DoesNotExist:
+            return Response({"detail": "Metric not found for this activity type."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            challenge = create_challenge(
+                creator=request.user,
+                activity_type=activity_type,
+                metric=metric,
+                challenge_type=data['challenge_type'],
+                target_value=data.get('target_value'),
+                starts_at=data['starts_at'],
+                ends_at=data['ends_at'],
+                invitee_ids=data['invitees'],
+                title=data.get('title')
+            )
+        except (DjangoValidationError, ValueError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoPermissionDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+        out_serializer = FriendChallengeSerializer(challenge, context={'request': request})
+        return Response(out_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class FriendChallengeDetailAPIView(APIView):
+    """
+    Retrieve details and live progress of a specific challenge.
+    Only creator and invited/accepted participants are authorized to view.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        challenge = get_object_or_404(
+            FriendChallenge.objects.select_related('activity_type', 'metric', 'created_by', 'winner'),
+            id=pk
+        )
+
+        # Authorization: must be creator or participant
+        is_participant = challenge.participants.filter(user=request.user).exists()
+        if challenge.created_by_id != request.user.id and not is_participant:
+            raise DjangoPermissionDenied("You are not authorized to view this challenge.")
+
+        # Update progress dynamically
+        calculate_and_update_challenge_progress(challenge)
+
+        serializer = FriendChallengeSerializer(challenge, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FriendChallengeAcceptAPIView(APIView):
+    """
+    Accepts an invitation to a challenge.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            challenge = accept_challenge_invitation(request.user, pk)
+            calculate_and_update_challenge_progress(challenge)
+        except (DjangoValidationError, ValueError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoPermissionDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = FriendChallengeSerializer(challenge, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FriendChallengeDeclineAPIView(APIView):
+    """
+    Declines an invitation to a challenge.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            challenge = decline_challenge_invitation(request.user, pk)
+        except (DjangoValidationError, ValueError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoPermissionDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = FriendChallengeSerializer(challenge, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FriendChallengeCancelAPIView(APIView):
+    """
+    Cancels a challenge. Only authorized for the challenge creator.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            challenge = cancel_challenge(request.user, pk)
+        except (DjangoValidationError, ValueError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoPermissionDenied as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = FriendChallengeSerializer(challenge, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)

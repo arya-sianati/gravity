@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 16 — Friends & Privacy (Complete)
+Phase 17 — Friend Challenges (Complete)
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -32,6 +32,18 @@ Phase 16 — Friends & Privacy (Complete)
   - Interactive Location Privacy Settings selector in `ProfileScreen.tsx` with live `PATCH /api/me/` updates supporting Hidden, Blurred (~500m grid default), Friends Only, and Exact modes.
   - Frontend `FriendsScreen.tsx` featuring a 3-tab layout (`Friends` with live presence feed and roster, `Requests` with incoming/outgoing actions, `Find Friends` with real-time search), and a user profile inspection modal.
   - Dedicated automated test suite in `accounts/tests_phase16.py` (14 comprehensive tests; 120 tests passing repository-wide).
+- Phase 17 - Friend Challenges
+  - Database models `FriendChallenge`, `ChallengeParticipant`, and `ChallengeReward` with unique constraints, validation, and migration `0008`.
+  - Comprehensive service layer supporting all 3 challenge types: `first_to_target` (first to reach target value wins, completion timestamp tie-breaker), `highest_by_deadline` (highest metric value at deadline wins; co-winners with competition ranking `1, 1, 3`), and `cooperative_target` (sum of accepted participants >= target).
+  - Configurable `ActivityMetric` architecture reuse with dynamic metric validation across standard and dynamic activities (e.g. Pickleball).
+  - Strict privacy and authorization isolation: challenges are strictly between accepted friends, non-accepted users cannot view or participate, and challenge participation never exposes or bypasses location privacy.
+  - Idempotent, database-backed XP distribution via `ChallengeReward` unique constraints (Participation XP + Winner XP) integrated with `XPTransaction`.
+  - Realtime challenge notifications via Channels consumer `GravityChallengeConsumer` routed at `/ws/gravity/challenge/<id>/`.
+  - Frontend TypeScript API client `frontend/src/api/challenges.ts` and interactive UI in `FriendsScreen.tsx` (Challenges tab, filter chips, challenge creator modal, progress bars, winner badges, invitation accept/decline/cancel actions).
+  - Dedicated test suite `activities/tests_phase17.py` (16 comprehensive tests; 136 tests passing repository-wide).
+
+## Next phase
+- Phase 18 — Auto-Stop & Session Integrity
 
 ## In progress
 - None

@@ -103,3 +103,81 @@ class MetricValueSerializer(serializers.ModelSerializer):
         from .models import MetricValue
         model = MetricValue
         fields = ['metric_slug', 'value', 'updated_at']
+
+
+from .models import FriendChallenge, ChallengeParticipant
+
+class ChallengeParticipantSerializer(serializers.ModelSerializer):
+    user = ParticipantUserSerializer(read_only=True)
+
+    class Meta:
+        model = ChallengeParticipant
+        fields = [
+            'id',
+            'user',
+            'invitation_status',
+            'joined_at',
+            'progress',
+            'is_winner',
+            'rank',
+        ]
+
+
+class FriendChallengeSerializer(serializers.ModelSerializer):
+    created_by = ParticipantUserSerializer(read_only=True)
+    activity_type = ActivityTypeSerializer(read_only=True)
+    metric = ActivityMetricSerializer(read_only=True)
+    winner = ParticipantUserSerializer(read_only=True)
+    participants = ChallengeParticipantSerializer(many=True, read_only=True)
+    my_participant_info = serializers.SerializerMethodField()
+    combined_progress = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FriendChallenge
+        fields = [
+            'id',
+            'title',
+            'created_by',
+            'activity_type',
+            'metric',
+            'challenge_type',
+            'target_value',
+            'starts_at',
+            'ends_at',
+            'status',
+            'winner',
+            'completed_at',
+            'created_at',
+            'updated_at',
+            'participants',
+            'my_participant_info',
+            'combined_progress',
+        ]
+
+    def get_my_participant_info(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        part = obj.participants.filter(user=request.user).first()
+        if part:
+            return ChallengeParticipantSerializer(part).data
+        return None
+
+    def get_combined_progress(self, obj):
+        if obj.challenge_type == FriendChallenge.ChallengeType.COOPERATIVE_TARGET:
+            accepted = obj.participants.filter(invitation_status=ChallengeParticipant.InvitationStatus.ACCEPTED)
+            return round(sum(p.progress for p in accepted), 2)
+        return None
+
+
+class ChallengeCreateSerializer(serializers.Serializer):
+    activity_type_slug = serializers.CharField(required=False)
+    activity_type = serializers.CharField(required=False)
+    metric_slug = serializers.CharField(required=False)
+    metric = serializers.CharField(required=False)
+    challenge_type = serializers.ChoiceField(choices=FriendChallenge.ChallengeType.choices)
+    target_value = serializers.FloatField(required=False, allow_null=True)
+    starts_at = serializers.DateTimeField()
+    ends_at = serializers.DateTimeField()
+    invitees = serializers.ListField(child=serializers.IntegerField(), required=True)
+    title = serializers.CharField(required=False, allow_blank=True, max_length=150)

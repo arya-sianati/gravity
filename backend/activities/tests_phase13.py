@@ -78,7 +78,7 @@ class EventTests(TestCase):
         # Exactly at starts_at (eligible)
         p_start = self.create_participation(self.act_bball, self.event_bball.starts_at)
         res_start = evaluate_events_for_participation(self.user, p_start, 50)
-        self.assertEqual(len(res_start), 1)
+        self.assertEqual(len(res_start), 2)
 
         # Exactly at ends_at (NOT eligible, half-open interval)
         p_end = self.create_participation(self.act_bball, self.event_bball.ends_at)

@@ -72,7 +72,7 @@ def compute_leaderboard(activity_type, period='all', target_season=None):
             "user": {
                 "id": item['user__id'],
                 "username": item['user__username'],
-                "display_name": item['user__display_name'],
+                "display_name": item['user__display_name'] or item['user__username'],
                 "avatar_url": None
             },
             "rank": rank,

@@ -56,6 +56,8 @@ def evaluate_events_for_participation(user, participation, base_xp):
     # To be safe and predictable, we attach the multiplier bonus entirely to max_multiplier_event
     
     results = []
+    combined_bonus_xp = 0
+    event_names = []
     
     for ev in events_to_process:
         multiplier_bonus = 0
@@ -65,6 +67,8 @@ def evaluate_events_for_participation(user, participation, base_xp):
         flat_bonus = ev.flat_xp_bonus
         
         total_bonus = multiplier_bonus + flat_bonus
+        combined_bonus_xp += total_bonus
+        event_names.append(ev.name)
         
         # 1. Create EventReward (Idempotency ledger)
         reward = EventReward.objects.create(
@@ -75,14 +79,8 @@ def evaluate_events_for_participation(user, participation, base_xp):
             multiplier_bonus_xp=multiplier_bonus,
             flat_bonus_xp=flat_bonus
         )
-        
-        # 2. Issue XPTransaction if there is any bonus
-        if total_bonus > 0:
-            # We use 'event_bonus' as reason if we extend the model, but since we didn't add reason EVENT_BONUS,
-            # wait, I should add EVENT_BONUS to XPTransaction.Reason. Let's do it in models.
-            pass # We will do it after updating models.py
             
-        # 3. Issue Badge if any
+        # 2. Issue Badge if any
         badge_earned = None
         if ev.badge and ev.badge.is_active:
             ub, created = award_badge(user, ev.badge.slug, activity_type=ev.activity_type)
@@ -99,6 +97,16 @@ def evaluate_events_for_participation(user, participation, base_xp):
             "badge": badge_earned,
             "event_obj": ev
         })
+
+    if combined_bonus_xp > 0:
+        from .xp_service import award_xp
+        award_xp(
+            user=user,
+            amount=combined_bonus_xp,
+            reason=XPTransaction.Reason.EVENT,
+            description=f"Event Bonus: {', '.join(event_names)}",
+            participation=participation
+        )
 
     return results
 

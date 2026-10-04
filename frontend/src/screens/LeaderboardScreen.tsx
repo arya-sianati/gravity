@@ -72,7 +72,7 @@ export const LeaderboardScreen: React.FC = () => {
       params.season = selectedSeason;
     }
     
-    apiClient.get<LeaderboardResponse>(`/api/leaderboards/${selectedActivity}/`, { params })
+    apiClient.get<LeaderboardResponse>(`/leaderboards/${selectedActivity}/`, { params })
       .then(res => {
         setData(res.data);
         if (res.data.detail) {

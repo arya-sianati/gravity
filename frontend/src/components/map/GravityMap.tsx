@@ -12,7 +12,7 @@ import { useGravitySocket } from '../../lib/realtime/useGravitySocket';
 import { AreaHistoryModal } from '../history/AreaHistoryModal';
 
 const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
-const FALLBACK_CENTER: [number, number] = [-98.5795, 39.8283];
+const FALLBACK_CENTER: [number, number] = [-75.5085, 40.5985]; // Muhlenberg College campus
 
 interface GravityMapProps {}
 
@@ -55,7 +55,7 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
       container: mapContainerRef.current!,
       style: STYLE_URL,
       center: FALLBACK_CENTER,
-      zoom: 3,
+      zoom: 14,
       interactive: true
     });
 
@@ -174,6 +174,10 @@ export const GravityMap: React.FC<GravityMapProps> = () => {
         });
       }).catch(err => console.error("Failed to load activities for map prep", err));
       
+      if (mapRef.current) {
+        const bounds = mapRef.current.getBounds();
+        setBbox([bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()]);
+      }
       handleRecenter();
     });
 

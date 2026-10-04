@@ -40,12 +40,12 @@ export interface NearbySession {
 
 export const startSession = async (activityType: number, lat: number, lng: number, label?: string): Promise<ActivitySession> => {
   const payload = { activity_type: activityType, lat, lng, label };
-  const response = await apiClient.post<ActivitySession>('/api/sessions/', payload);
+  const response = await apiClient.post<ActivitySession>('/sessions/', payload);
   return response.data;
 };
 
 export const joinSession = async (sessionId: string, params?: { source?: string }): Promise<ActivitySession> => {
-  const response = await apiClient.post<ActivitySession>(`/api/sessions/${sessionId}/join/`, params || {});
+  const response = await apiClient.post<ActivitySession>(`/sessions/${sessionId}/join/`, params || {});
   return response.data;
 };
 
@@ -59,7 +59,7 @@ export interface LeaveSessionResponse {
 }
 
 export const leaveSession = async (sessionId: string): Promise<LeaveSessionResponse> => {
-  const res = await apiClient.post<LeaveSessionResponse>(`/api/sessions/${sessionId}/leave/`);
+  const res = await apiClient.post<LeaveSessionResponse>(`/sessions/${sessionId}/leave/`);
   return res.data;
 };
 
@@ -74,39 +74,39 @@ export interface HeartbeatResponse {
 }
 
 export const sendActivityHeartbeat = async (lat: number, lng: number): Promise<HeartbeatResponse> => {
-  const response = await apiClient.post<HeartbeatResponse>('/api/me/activity-location/', { lat, lng });
+  const response = await apiClient.post<HeartbeatResponse>('/me/activity-location/', { lat, lng });
   return response.data;
 };
 
 export const getNearbySessions = async (activitySlug: string, lat: number, lng: number): Promise<NearbySession[]> => {
-  const response = await apiClient.get<NearbySession[]>('/api/sessions/nearby/', {
+  const response = await apiClient.get<NearbySession[]>('/sessions/nearby/', {
     params: { activity: activitySlug, lat, lng }
   });
   return response.data;
 };
 
 export const getActiveParticipation = async (): Promise<ActivitySession | null> => {
-  const response = await apiClient.get<ActivitySession | null>('/api/me/active-participation/');
+  const response = await apiClient.get<ActivitySession | null>('/me/active-participation/');
   return response.data;
 };
 
 export const getJoinCode = async (sessionId: string): Promise<{ join_url: string; expires_at: string | null }> => {
-  const response = await apiClient.get(`/api/sessions/${sessionId}/join-code/`);
+  const response = await apiClient.get(`/sessions/${sessionId}/join-code/`);
   return response.data;
 };
 
 export const getJoinPreview = async (token: string): Promise<any> => {
-  const response = await apiClient.get(`/api/join/${token}/`);
+  const response = await apiClient.get(`/join/${token}/`);
   return response.data;
 };
 
 export const joinByToken = async (token: string): Promise<any> => {
-  const response = await apiClient.post(`/api/join/${token}/`);
+  const response = await apiClient.post(`/join/${token}/`);
   return response.data;
 };
 
 
 export const updateMetrics = async (participationId: number, metrics: Record<string, number | null>): Promise<{metrics: Record<string, number>}> => {
-  const response = await apiClient.patch(`/api/participations/${participationId}/metrics/`, metrics);
+  const response = await apiClient.patch(`/participations/${participationId}/metrics/`, metrics);
   return response.data;
 };

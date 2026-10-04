@@ -20,7 +20,7 @@ export interface LiveMapFeatureCollection {
 }
 
 export const getLiveMap = async (bbox: number[]): Promise<LiveMapFeatureCollection> => {
-  const response = await apiClient.get<LiveMapFeatureCollection>('/api/map/live/', {
+  const response = await apiClient.get<LiveMapFeatureCollection>('/map/live/', {
     params: { bbox: bbox.join(',') }
   });
   return response.data;

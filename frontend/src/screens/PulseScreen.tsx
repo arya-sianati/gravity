@@ -311,12 +311,23 @@ export const PulseScreen: React.FC = () => {
               <p className="text-xs text-gray-400 max-w-xs">{locationError}</p>
               <p className="text-[11px] text-gray-500 max-w-xs mt-1">{LOCATION_PRIVACY_EXPLANATION}</p>
             </div>
-            <button
-              onClick={acquireLocation}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow-md transition-all active:scale-95"
-            >
-              Enable Location & Retry
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={acquireLocation}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow-md transition-all active:scale-95"
+              >
+                Enable Location & Retry
+              </button>
+              <button
+                onClick={() => {
+                  setCoords({ lat: 40.5985, lng: -75.5085 });
+                  setLocationError(null);
+                }}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-lg border border-gray-700 transition-all active:scale-95"
+              >
+                Use Campus Location
+              </button>
+            </div>
           </div>
         ) : pulseMode === 'soon' ? (
           soonLoading && soonItems.length === 0 ? (

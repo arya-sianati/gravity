@@ -33,11 +33,11 @@ export interface ActivityType {
 }
 
 export const getActivities = async (): Promise<ActivityType[]> => {
-  const response = await apiClient.get<ActivityType[]>('/api/activity-types/');
+  const response = await apiClient.get<ActivityType[]>('/activity-types/');
   return response.data;
 };
 
 export const getActivity = async (slug: string): Promise<ActivityType> => {
-  const response = await apiClient.get<ActivityType>(`/api/activity-types/${slug}/`);
+  const response = await apiClient.get<ActivityType>(`/activity-types/${slug}/`);
   return response.data;
 };

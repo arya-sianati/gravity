@@ -39,7 +39,7 @@ export interface PulseNowParams {
 }
 
 export const getPulseNow = async (params: PulseNowParams): Promise<PulseNowResponse> => {
-  const response = await apiClient.get<PulseNowResponse>('/api/pulse/now/', { params });
+  const response = await apiClient.get<PulseNowResponse>('/pulse/now/', { params });
   return response.data;
 };
 
@@ -103,6 +103,6 @@ export interface PulseSoonParams {
 }
 
 export const getPulseSoon = async (params: PulseSoonParams): Promise<PulseSoonResponse> => {
-  const response = await apiClient.get<PulseSoonResponse>('/api/pulse/soon/', { params });
+  const response = await apiClient.get<PulseSoonResponse>('/pulse/soon/', { params });
   return response.data;
 };

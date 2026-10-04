@@ -52,8 +52,13 @@ export const apiClient = axios.create({
   xsrfHeaderName: 'X-CSRFToken',
 });
 
-// Ensure CSRF token is attached to mutating requests
+// Normalize URL and ensure CSRF token is attached to mutating requests
 apiClient.interceptors.request.use(async (config) => {
+  // Prevent double /api/ prefix if caller passes path with leading /api
+  if (config.url?.startsWith('/api/')) {
+    config.url = config.url.substring(4);
+  }
+
   const method = config.method?.toUpperCase();
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method || '')) {
     let token = getCookie('csrftoken');

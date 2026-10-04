@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ActiveSessionProvider } from './context/ActiveSessionContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -51,6 +51,8 @@ function App() {
                 <Route path="profile" element={<ProfileScreen />} />
                 <Route path="start" element={<StartActivityScreen />} />
               </Route>
+              {/* Fallback wildcard route */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </ActiveSessionProvider>

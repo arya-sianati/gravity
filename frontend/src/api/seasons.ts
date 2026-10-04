@@ -13,11 +13,11 @@ export interface Season {
 }
 
 export const getSeasons = async (): Promise<Season[]> => {
-  const response = await apiClient.get<Season[]>('/api/seasons/');
+  const response = await apiClient.get<Season[]>('/seasons/');
   return response.data;
 };
 
 export const getCurrentSeason = async (): Promise<Season> => {
-  const response = await apiClient.get<Season>('/api/seasons/current/');
+  const response = await apiClient.get<Season>('/seasons/current/');
   return response.data;
 };

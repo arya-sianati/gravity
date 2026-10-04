@@ -22,6 +22,11 @@ export const AppShell: React.FC = () => {
               Level Up! Lv {xpFeedback.newLevel}
             </div>
           )}
+          {xpFeedback.event_rewards?.map((er, idx) => (
+            <div key={`ev-${idx}`} className="bg-rose-600/95 text-white px-4 py-1.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(225,29,72,0.6)] border border-rose-400">
+              +{er.bonus_xp} {er.event} Bonus
+            </div>
+          ))}
           {xpFeedback.badges_earned?.map(b => (
             <div key={b.slug} className="bg-amber-600/95 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(217,119,6,0.6)] border border-amber-400 flex items-center space-x-2 w-max">
               <span className="text-xl">{b.icon}</span>

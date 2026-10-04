@@ -96,3 +96,20 @@ class StreakAdmin(admin.ModelAdmin):
     list_display = ('user', 'current_count', 'longest_count', 'last_qualified_date')
     search_fields = ('user__username',)
     readonly_fields = ('user', 'longest_count')
+
+from .models import GravityEvent, EventReward
+
+@admin.register(GravityEvent)
+class GravityEventAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_active', 'computed_status', 'starts_at', 'ends_at', 'activity_type', 'xp_multiplier')
+    list_filter = ('is_active', 'activity_type')
+    search_fields = ('name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('computed_status', 'created_at', 'updated_at')
+    
+@admin.register(EventReward)
+class EventRewardAdmin(admin.ModelAdmin):
+    list_display = ('user', 'event', 'base_xp', 'multiplier_bonus_xp', 'flat_bonus_xp', 'awarded_at')
+    list_filter = ('event',)
+    search_fields = ('user__username', 'event__name')
+    readonly_fields = ('user', 'event', 'participation', 'base_xp', 'multiplier_bonus_xp', 'flat_bonus_xp', 'awarded_at')

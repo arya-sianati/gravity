@@ -3,7 +3,7 @@
 Last updated: 2026-10-04
 
 ## Current phase
-Phase 13 — Gravity Events
+Phase 14 — Seasons
 
 ## Completed
 - Phase 00 - Repository & Specification Lock
@@ -19,11 +19,13 @@ Phase 13 — Gravity Events
 - Phase 10 - Metrics & Activity Leaderboards
 - Phase 11 - Gravity XP & Levels
 - Phase 12 - Badges & Consistency
-  - Added models `Badge`, `UserBadge`, `Streak`.
-  - Constructed strictly decoupled evaluation logic in `achievement_service.py` and `streak_service.py`.
-  - Registered idempotent completion response merging streak state, awarded XP, and newly earned badges in the same REST sequence natively.
-  - Profile updated displaying dynamic Streak metrics, Longest Streak bounds, and visual array of earned badges.
-  - Safe seeding configuration injected enabling administrator overrides to persist safely via `seed_badges`.
+- Phase 13 - Gravity Events
+  - Added models `GravityEvent` and `EventReward`.
+  - Constructed strictly decoupled logic mapping overlapping event bonuses into a singular `award_xp` transaction ledger correctly preserving idempotency boundaries.
+  - Profile XP and Feedback Toast overlay updated displaying exact event metric rewards mapped appropriately alongside streaks, levels, and badges.
+  - Safe seeding configurations applied for administrative boundaries globally.
+  - Added REST `/api/events/` endpoint for global API querying.
+  - Mapped event indicators securely onto UI dynamically tracking multipliers and flat bonuses.
 
 ## In progress
 - None
@@ -52,4 +54,4 @@ npm run dev
 ```
 
 ## Next recommended task
-Begin Phase 13: Gravity Events.
+Begin Phase 14: Seasons.

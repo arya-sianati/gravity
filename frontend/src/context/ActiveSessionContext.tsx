@@ -10,11 +10,17 @@ interface BadgeEarned {
   icon: string;
 }
 
+interface EventRewardInfo {
+  event: string;
+  bonus_xp: number;
+}
+
 interface XPFeedback {
   amount: number;
   levelUp: boolean;
   newLevel: number;
   badges_earned: BadgeEarned[];
+  event_rewards: EventRewardInfo[];
 }
 
 interface ActiveSessionContextType {
@@ -62,7 +68,8 @@ export const ActiveSessionProvider: React.FC<{ children: React.ReactNode }> = ({
           amount: res.xp_awarded,
           levelUp: !!res.level_up,
           newLevel: res.current_level,
-          badges_earned: res.badges_earned || []
+          badges_earned: res.badges_earned || [],
+          event_rewards: res.event_rewards || []
         });
         refreshUser();
         setTimeout(() => setXpFeedback(null), 5000);

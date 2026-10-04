@@ -286,3 +286,77 @@ class Streak(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Streak: {self.current_count} (Longest: {self.longest_count})"
+
+class GravityEvent(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    description = models.TextField()
+    icon = models.CharField(max_length=50, blank=True, null=True)
+    
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    
+    activity_type = models.ForeignKey(ActivityType, null=True, blank=True, on_delete=models.SET_NULL, related_name='events')
+    
+    xp_multiplier = models.FloatField(default=1.0)
+    flat_xp_bonus = models.PositiveIntegerField(default=0)
+    badge = models.ForeignKey('Badge', null=True, blank=True, on_delete=models.SET_NULL)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(ends_at__gt=models.F('starts_at')),
+                name='event_ends_after_start'
+            )
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.starts_at and self.ends_at and self.starts_at >= self.ends_at:
+            raise ValidationError("ends_at must be strictly after starts_at.")
+
+    def __str__(self):
+        return self.name
+        
+    @property
+    def is_live(self):
+        if not self.is_active:
+            return False
+        from django.utils import timezone
+        now = timezone.now()
+        return self.starts_at <= now < self.ends_at
+
+    @property
+    def computed_status(self):
+        if not self.is_active:
+            return 'disabled'
+        from django.utils import timezone
+        now = timezone.now()
+        if now < self.starts_at:
+            return 'upcoming'
+        if now >= self.ends_at:
+            return 'ended'
+        return 'live'
+
+class EventReward(models.Model):
+    event = models.ForeignKey(GravityEvent, on_delete=models.CASCADE, related_name='rewards')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_rewards')
+    participation = models.ForeignKey(Participation, on_delete=models.CASCADE, related_name='event_rewards')
+    
+    base_xp = models.PositiveIntegerField(default=0)
+    multiplier_bonus_xp = models.PositiveIntegerField(default=0)
+    flat_bonus_xp = models.PositiveIntegerField(default=0)
+    
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['event', 'participation'], name='unique_event_participation_reward')
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.event.name} Reward"

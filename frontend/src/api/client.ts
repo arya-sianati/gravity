@@ -142,3 +142,25 @@ export const getMyBadges = async (): Promise<MyBadgesResponse> => {
   const response = await apiClient.get<MyBadgesResponse>('/me/badges/');
   return response.data;
 };
+
+export interface GravityEventData {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string | null;
+  starts_at: string;
+  ends_at: string;
+  is_active: boolean;
+  status: string;
+  activity_type_slug: string | null;
+  activity_type_name: string | null;
+  xp_multiplier: number;
+  flat_xp_bonus: number;
+  badge_icon: string | null;
+}
+
+export const getLiveEvents = async (): Promise<GravityEventData[]> => {
+  const response = await apiClient.get<GravityEventData[]>('/events/?status=live');
+  return response.data;
+};

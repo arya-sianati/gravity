@@ -188,6 +188,7 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
             )
             
             # Phase 12: Evaluate streak
+            from .logic.streak_service import evaluate_streak
             streak, incremented, _ = evaluate_streak(request.user, participation)
             streak_state = {
                 "current": streak.current_count,
@@ -195,6 +196,7 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
             }
             
             # Phase 12: Evaluate badges
+            from .logic.achievement_service import evaluate_after_participation
             earned_list = evaluate_after_participation(request.user, participation, streak)
             for b in earned_list:
                 badges_earned.append({
@@ -203,11 +205,23 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
                     "icon": b.icon
                 })
 
+            # Phase 13: Evaluate events
+            from .logic.event_service import evaluate_events_for_participation
+            event_rewards = evaluate_events_for_participation(request.user, participation, session.activity_type.default_xp)
+            
+            # Process event badges so they appear in UI toast
+            for er in event_rewards:
+                if er.get("badge"):
+                    badges_earned.append(er["badge"])
+                
+            # If total_xp was bumped by events, check level up
+            request.user.refresh_from_db()
             if xpt:
-                request.user.refresh_from_db()
                 xp_awarded = xpt.amount
-                if request.user.current_level > old_level:
-                    level_up = True
+                
+            # Compute total xp awarded dynamically from both if needed, but the original payload expects base. Let's just update level_up check!
+            if request.user.current_level > old_level:
+                level_up = True
 
         active_count = session.participations.filter(status=Participation.Status.ACTIVE).count()
         if active_count == 0 and session.status == ActivitySession.Status.ACTIVE:
@@ -221,7 +235,8 @@ class ActivitySessionViewSet(viewsets.ModelViewSet):
             "level_up": level_up,
             "current_level": request.user.current_level,
             "streak": streak_state,
-            "badges_earned": badges_earned
+            "badges_earned": badges_earned,
+            "event_rewards": event_rewards if 'event_rewards' in locals() else []
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
@@ -544,3 +559,45 @@ class LeaderboardAPIView(APIView):
             "rows": rows,
             "me": me
         })
+
+class GravityEventViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        from .models import GravityEvent
+        from django.utils import timezone
+        
+        qs = GravityEvent.objects.all().order_by('-starts_at')
+        
+        status_filter = self.request.query_params.get('status')
+        now = timezone.now()
+        
+        if status_filter == 'live':
+            qs = qs.filter(is_active=True, starts_at__lte=now, ends_at__gt=now)
+        elif status_filter == 'upcoming':
+            qs = qs.filter(is_active=True, starts_at__gt=now)
+        elif status_filter == 'ended':
+            qs = qs.filter(ends_at__lte=now)
+            
+        return qs
+
+    def get_serializer_class(self):
+        from rest_framework import serializers
+        from .models import GravityEvent
+        
+        class GravityEventSerializer(serializers.ModelSerializer):
+            activity_type_slug = serializers.CharField(source='activity_type.slug', read_only=True, allow_null=True)
+            activity_type_name = serializers.CharField(source='activity_type.name', read_only=True, allow_null=True)
+            status = serializers.CharField(source='computed_status', read_only=True)
+            badge_icon = serializers.CharField(source='badge.icon', read_only=True, allow_null=True)
+            
+            class Meta:
+                model = GravityEvent
+                fields = [
+                    'id', 'name', 'slug', 'description', 'icon',
+                    'starts_at', 'ends_at', 'is_active', 'status',
+                    'activity_type_slug', 'activity_type_name',
+                    'xp_multiplier', 'flat_xp_bonus', 'badge_icon'
+                ]
+        return GravityEventSerializer
